@@ -40,6 +40,14 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "eureka",
+          "organization": "darius-deng"
+        }
       ]
     ],
     "experiments": {
