@@ -1,13 +1,17 @@
-import type { CreateUserParams, SignInParams } from "@/type";
-import { Account, Avatars, Client, Databases, ID, Query } from "react-native-appwrite";
+import type { CreateUserParams, GetMenuParams, SignInParams } from "@/type";
+import { Account, Avatars, Client, Databases, ID, Query, Storage } from "react-native-appwrite";
 
 export const appwriteConfig = {
     endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT, // url of backend server
     platform: "com.SGBoleh.eureka", // application identifier
     projectId: process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID, // project id
     databaseId: '6946654c00135532b1a5', // database id
-    userCollectionId: 'user'
-
+    bucketId: '6950f39d0013f71e7771', // storage bucket id
+    userCollectionId: 'user',
+    categoriesCollectionId: 'categories', 
+    menuCollectionId: 'menu',
+    customizationsCollectionId: 'customizations',
+    menuCustomizationsCollectionId: 'menu_customizations', 
 }
 
 export const client = new Client(); // create empty client (bridge between app and appwrite server)
@@ -21,8 +25,11 @@ client
 
 export const account = new Account(client);
 export const databases = new Databases(client);
+export const storage = new Storage(client);
 const avatars = new Avatars(client);
 
+
+//defining functions that interact with appwrite services
 export const createUser = async ({email,password,name}: CreateUserParams) => { // parameter type: CreateUserParams, destructured so can use each field directly
     try {
         //create new account on appwrite
@@ -84,4 +91,41 @@ export const getCurrentUser = async () => {
         throw new Error(e as string);
     }
 
+}
+
+export const getMenu = async ({category, query}: GetMenuParams) => {
+    try {
+        const queries: string[] = [];
+        
+        if (category){ // if category filter is provided
+            queries.push(Query.equal('categories', category));
+        } 
+        if (query) { // if search query is provided (name search)
+            queries.push(Query.search('name', query));
+        }
+
+        const menus = await databases.listDocuments(
+            appwriteConfig.databaseId,
+            appwriteConfig.menuCollectionId,
+            queries // accumulated filters
+        );
+
+        return menus.documents;
+
+    } catch (e) {
+        throw new Error(e as string);
+    }
+}
+
+export const getCategories = async () => {
+    try {
+        const categories = await databases.listDocuments(
+            appwriteConfig.databaseId,
+            appwriteConfig.categoriesCollectionId,
+        );
+
+        return categories.documents; 
+    } catch (e) {
+        throw new Error(e as string);
+    }
 }

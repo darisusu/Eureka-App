@@ -11,7 +11,8 @@ const CustomInput = ({
     secureTextEntry = false,
     keyboardType = 'default',
 }: CustomInputProps) => {
-    const [isFocused, setIsFocused] = useState(false);
+
+    const [isFocused, setIsFocused] = useState(false); // isFocused state tracks whether user is typing in the box
 
     return (
         <View className = "w-full">
