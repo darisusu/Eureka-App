@@ -2,14 +2,11 @@ import { Models } from "react-native-appwrite";
 
 export interface MenuItem extends Models.Document {
     name: string;
-    price: number;
-    image_url: string;
     description: string;
-    prep_time_min?: number;
-    calories?: number;
-    protein?: number;
-    rating?: number;
-    type?: string;
+    image_url: string;
+    price: number;
+    category_name: string;
+    prep_time_min: number;
 }
 
 export interface Category extends Models.Document {
@@ -18,12 +15,12 @@ export interface Category extends Models.Document {
 }
 
 export type User = {
-  id: string;        // your document id (from doc.$id)
-  accountId: string; // important, you store this
-  name: string;
-  email: string;
-  avatar: string;
-};
+    id: string;        // your document id (from doc.$id)
+    accountId: string; // important, you store this
+    name: string;
+    email: string;
+    avatar: string;
+}
 
 export interface CartCustomization {
     id: string;
