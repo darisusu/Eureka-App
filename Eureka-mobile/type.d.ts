@@ -22,11 +22,21 @@ export type User = {
     avatar: string;
 }
 
-export interface CartCustomization {
-    id: string;
+export interface Order {
+    userId: string;
+    status: "received" | "preparing" | "ready" | "collected";
+    isPaid: boolean;
+    total: number;
+    orderNumber: string;
+}
+
+export interface OrderItem {
+    orderId: string;
+    menuId: string;
     name: string;
     price: number;
-    type: string;
+    qty: number;
+    specialRequest?: string;
 }
 
 export interface CartItemType {
@@ -35,15 +45,14 @@ export interface CartItemType {
     price: number;
     image_url: string;
     quantity: number;
-    customizations?: CartCustomization[];
 }
 
 export interface CartStore {
     items: CartItemType[];
     addItem: (item: Omit<CartItemType, "quantity">) => void;
-    removeItem: (id: string, customizations: CartCustomization[]) => void;
-    increaseQty: (id: string, customizations: CartCustomization[]) => void;
-    decreaseQty: (id: string, customizations: CartCustomization[]) => void;
+    removeItem: (id: string) => void;
+    increaseQty: (id: string) => void;
+    decreaseQty: (id: string) => void;
     clearCart: () => void;
     getTotalItems: () => number;
     getTotalPrice: () => number;

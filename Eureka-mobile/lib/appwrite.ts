@@ -1,4 +1,4 @@
-import type { CreateUserParams, GetMenuParams, SignInParams } from "@/type";
+import type { CreateUserParams, GetMenuParams, Order, OrderItem, SignInParams } from "@/type";
 import { Account, Avatars, Client, Databases, ID, Query, Storage } from "react-native-appwrite";
 import type { User } from "@/type";
 
@@ -11,8 +11,8 @@ export const appwriteConfig = {
     userCollectionId: 'user',
     categoriesCollectionId: 'categories', 
     menuCollectionId: 'menu',
-    customizationsCollectionId: 'customizations',
-    menuCustomizationsCollectionId: 'menu_customizations', 
+    ordersCollectionId: 'orders',
+    orderItemsCollectionId: 'order_items',
 }
 
 export const client = new Client(); // create empty client (bridge between app and appwrite server)
@@ -89,8 +89,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
         const user: User = {
             id: doc.$id,
             accountId: doc.accountId,
-                        name: doc.name,
-
+            name: doc.name,
             email: doc.email,
             avatar: doc.avatar,
         };
@@ -98,8 +97,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
         return user;
 
     } catch (e) {
-        console.log(e);
-        throw new Error(e as string);
+        return null;
     }
 
 }
@@ -140,3 +138,21 @@ export const getCategories = async () => {
         throw new Error(e as string);
     }
 }
+
+export const createOrder = async (order: Order) => {
+  return databases.createDocument(
+    appwriteConfig.databaseId,
+    appwriteConfig.ordersCollectionId,
+    ID.unique(),
+    order
+  );
+};
+
+export const createOrderItem = async (item: OrderItem) => {
+  return databases.createDocument(
+    appwriteConfig.databaseId,
+    appwriteConfig.orderItemsCollectionId,
+    ID.unique(),
+    item
+  );
+};
