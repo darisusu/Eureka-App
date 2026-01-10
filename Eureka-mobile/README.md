@@ -1,50 +1,109 @@
-# Welcome to your Expo app 👋
+# Eureka Preorder & Payment System (MVP)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Lightweight preorder + prepay mobile app for grab-and-go food stalls. Designed around fast pickup, reliable prep-time estimates, and low operational overhead.
 
-## Get started
+## Product Summary (from PRD)
 
-1. Install dependencies
+Goals:
+- Preorder + prepay before food enters the kitchen queue
+- Reliable estimated ready times
+- Clear order numbers and status visibility
+- Minimal operations for staff
 
-   ```bash
-   npm install
-   ```
+Non-goals (MVP):
+- Delivery
+- Dine-in table management
+- In-store POS
+- Inventory management
 
-2. Start the app
+## Current Features Implemented
 
-   ```bash
-   npx expo start
-   ```
+Customer:
+- Sign up / sign in (Appwrite)
+- Menu browse + search + category filter
+- Cart with quantity adjustments
+- Special request per item (stored on order items)
+- Create order + order items in Appwrite
 
-In the output, you'll find options to open the app in a
+Platform:
+- Expo Router navigation
+- Zustand state for auth + cart
+- Appwrite client integration
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## In Progress / Missing (per PRD)
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+Customer:
+- Payment integration (Stripe or equivalent)
+- Estimated ready time display and calculation
+- Order status tracking UI
+- Order history
+- Notifications (order received / ready)
 
-## Get a fresh project
+Staff:
+- Admin/staff role gating
+- Staff order dashboard with status updates
 
-When you're ready, run:
+## Tech Stack
 
-```bash
-npm run reset-project
+- Expo + React Native
+- Expo Router (file-based navigation)
+- Zustand (state)
+- Appwrite (auth + database + storage)
+- NativeWind (Tailwind-style classes)
+
+## Project Structure
+
+- `app/` screens and layouts
+- `components/` reusable UI
+- `store/` Zustand stores (auth, cart)
+- `lib/appwrite.ts` Appwrite client + API helpers
+- `lib/seed.ts` seed script for menu/category data
+- `lib/data.ts` dummy data source for seeding
+
+## Environment Setup
+
+Create a `.env` file with:
+```
+EXPO_PUBLIC_APPWRITE_ENDPOINT=...
+EXPO_PUBLIC_APPWRITE_PROJECT_ID=...
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Appwrite Collections
 
-## Learn more
+Required collections:
+- `user`
+- `categories`
+- `menu` (fields: name, description, image_url, price, categories, prep_time_min)
+- `orders` (userId, status, isPaid, total, orderNumber)
+- `order_items` (orderId, menuId, name, price, qty, specialRequest)
 
-To learn more about developing your project with Expo, look at the following resources:
+Note: Old `customizations` and `menu_customizations` are removed.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Running the App
 
-## Join the community
+Install dependencies:
+```
+npm install
+```
 
-Join our community of developers creating universal apps.
+Run:
+```
+npx expo start
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Seeding Appwrite Data
+
+The seed script clears and repopulates categories + menu:
+```
+node -e "import('./lib/seed.ts').then(m => m.default())"
+```
+
+Make sure `lib/data.ts` has valid image URLs; the seed script uploads images to Appwrite storage.
+
+## Next Steps (Suggested)
+
+1) Add payment flow before order creation
+2) Implement order history screen
+3) Implement admin/staff protected section
+4) Add ETA calculation using `prep_time_min`
+
