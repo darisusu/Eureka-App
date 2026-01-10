@@ -1,7 +1,7 @@
 import { useCartStore } from "@/store/cart.store";
 import { CartItemType } from "@/type";
 import { Image, Text, TouchableOpacity, View } from "react-native";
-import {images} from "@/constants";
+import { images } from "@/constants";
 
 const CartItem = ({ item }: { item: CartItemType }) => {
     const { increaseQty, decreaseQty, removeItem } = useCartStore();
@@ -25,7 +25,9 @@ const CartItem = ({ item }: { item: CartItemType }) => {
 
                     <View className="flex flex-row items-center gap-x-4 mt-2">
                         <TouchableOpacity
-                            onPress={() => decreaseQty(item.id)}
+                            onPress={() =>
+                                decreaseQty(item.id, item.specialRequest)
+                            }
                             className="cart-item__actions"
                         >
                             <Image
@@ -39,7 +41,9 @@ const CartItem = ({ item }: { item: CartItemType }) => {
                         <Text className="base-bold text-dark-100">{item.quantity}</Text>
 
                         <TouchableOpacity
-                            onPress={() => increaseQty(item.id)}
+                            onPress={() =>
+                                increaseQty(item.id, item.specialRequest)
+                            }
                             className="cart-item__actions"
                         >
                             <Image
@@ -50,11 +54,16 @@ const CartItem = ({ item }: { item: CartItemType }) => {
                             />
                         </TouchableOpacity>
                     </View>
+                    {!!item.specialRequest && (
+                        <Text className="text-gray-200 text-xs mt-2">
+                            {item.specialRequest}
+                        </Text>
+                    )}
                 </View>
             </View>
 
             <TouchableOpacity
-                onPress={() => removeItem(item.id)}
+                onPress={() => removeItem(item.id, item.specialRequest)}
                 className="flex-center"
             >
                 <Image source={images.trash} className="size-5" resizeMode="contain" />

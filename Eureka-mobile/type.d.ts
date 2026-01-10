@@ -45,14 +45,15 @@ export interface CartItemType {
     price: number;
     image_url: string;
     quantity: number;
+    specialRequest?: string;
 }
 
 export interface CartStore {
     items: CartItemType[];
     addItem: (item: Omit<CartItemType, "quantity">) => void;
-    removeItem: (id: string) => void;
-    increaseQty: (id: string) => void;
-    decreaseQty: (id: string) => void;
+    removeItem: (id: string, specialRequest?: string) => void;
+    increaseQty: (id: string, specialRequest?: string) => void;
+    decreaseQty: (id: string, specialRequest?: string) => void;
     clearCart: () => void;
     getTotalItems: () => number;
     getTotalPrice: () => number;
