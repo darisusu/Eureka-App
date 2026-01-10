@@ -5,10 +5,11 @@ export interface MenuItem extends Models.Document {
     price: number;
     image_url: string;
     description: string;
-    calories: number;
-    protein: number;
-    rating: number;
-    type: string;
+    prep_time_min?: number;
+    calories?: number;
+    protein?: number;
+    rating?: number;
+    type?: string;
 }
 
 export interface Category extends Models.Document {
@@ -16,11 +17,13 @@ export interface Category extends Models.Document {
     description: string;
 }
 
-export interface User extends Models.Document {
-    name: string;
-    email: string;
-    avatar: string;
-}
+export type User = {
+  id: string;        // your document id (from doc.$id)
+  accountId: string; // important, you store this
+  name: string;
+  email: string;
+  avatar: string;
+};
 
 export interface CartCustomization {
     id: string;

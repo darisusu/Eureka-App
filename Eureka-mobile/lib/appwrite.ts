@@ -1,5 +1,6 @@
 import type { CreateUserParams, GetMenuParams, SignInParams } from "@/type";
 import { Account, Avatars, Client, Databases, ID, Query, Storage } from "react-native-appwrite";
+import type { User } from "@/type";
 
 export const appwriteConfig = {
     endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT, // url of backend server
@@ -69,7 +70,7 @@ export const signIn = async ({email, password}: SignInParams) => {
     }
 }
 
-export const getCurrentUser = async () => {
+export const getCurrentUser = async (): Promise<User | null> => {
     try {
         const currentAccount = await account.get(); //uses current session token to get account details (authentication details)
         if (!currentAccount) {
@@ -84,7 +85,17 @@ export const getCurrentUser = async () => {
             throw new Error('User not found');
         }
 
-        return currentUser.documents[0]; 
+        const doc = currentUser.documents[0]; 
+        const user: User = {
+            id: doc.$id,
+            accountId: doc.accountId,
+                        name: doc.name,
+
+            email: doc.email,
+            avatar: doc.avatar,
+        };
+
+        return user;
 
     } catch (e) {
         console.log(e);

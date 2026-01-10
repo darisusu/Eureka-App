@@ -1,5 +1,5 @@
 import { getCurrentUser } from '@/lib/appwrite';
-import type { User } from '@sentry/react-native';
+import type { User } from '@/type';
 import { create } from 'zustand'
 
 type AuthState = {
@@ -33,7 +33,7 @@ const useAuthStore = create<AuthState>((set) => ({ // set is Zustand's function 
 
             const user = await getCurrentUser()
             if (user != null) {
-                set({ isAuthenticated: true, user: user as User });
+                set({ isAuthenticated: true, user: user as User});
             } else {
                 set ({ isAuthenticated: false, user: null });
             }

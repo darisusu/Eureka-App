@@ -1,12 +1,11 @@
 const dummyData = {
     categories: [
-        { name: "Burgers", description: "Juicy grilled burgers" },
-        { name: "Pizzas", description: "Oven-baked cheesy pizzas" },
-        { name: "Burritos", description: "Rolled Mexican delights" },
-        { name: "Sandwiches", description: "Stacked and stuffed sandwiches" },
-        { name: "Wraps", description: "Rolled up wraps packed with flavor" },
-        { name: "Bowls", description: "Balanced rice and protein bowls" },
-    ],
+  { name: "Drinks" },
+  { name: "Porridge" },
+  { name: "Fish Soup" },
+  { name: "Rice & Dishes" },
+  { name: "Bakery" },
+]
 
     customizations: [
         // Toppings
