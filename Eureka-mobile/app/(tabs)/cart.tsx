@@ -29,6 +29,10 @@ const Cart = () => {
   const { items, getTotalItems, getTotalPrice } = useCartStore();
   const totalItems = getTotalItems();
   const totalPrice = getTotalPrice();
+  const estimatedTime = {
+    range: "20-30 min",
+    note: "Based on current kitchen load",
+  };
 
   return (
     <SafeAreaView className="bg-white h-full">
@@ -50,6 +54,17 @@ const Cart = () => {
         ListFooterComponent={() =>
           totalItems > 0 && (
             <View className="gap-5">
+              <View className="border border-gray-200 p-5 rounded-2xl">
+                <Text className="h3-bold text-dark-100 mb-2">
+                  Estimated Time
+                </Text>
+                <Text className="text-2xl font-bold text-dark-100">
+                  {estimatedTime.range}
+                </Text>
+                <Text className="paragraph-regular text-gray-200 mt-1">
+                  {estimatedTime.note}
+                </Text>
+              </View>
               <View className="mt-6 border border-gray-200 p-5 rounded-2xl">
                 <Text className="h3-bold text-dark-100 mb-5">
                   Payment Summary
