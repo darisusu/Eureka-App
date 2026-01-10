@@ -3,13 +3,11 @@
 import CartItem from "@/components/CartItem";
 import CustomButton from "@/components/CustomButton";
 import CustomHeader from "@/components/CustomHeader";
-import { createOrder, createOrderItem } from "@/lib/appwrite";
-import useAuthStore from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
 import type { PaymentInfoStripeProps } from "@/type";
 import cn from "clsx";
-import React, { useState } from "react";
-import { Alert, FlatList, Text, View } from "react-native";
+import React from "react";
+import { FlatList, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const PaymentInfoStripe = ({
@@ -28,68 +26,16 @@ const PaymentInfoStripe = ({
   </View>
 );
 const Cart = () => {
-  const { items, getTotalItems, getTotalPrice, clearCart } = useCartStore();
-  const { user } = useAuthStore();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const { items, getTotalItems, getTotalPrice } = useCartStore();
   const totalItems = getTotalItems();
   const totalPrice = getTotalPrice();
-  const deliveryFee = 5;
-  const discount = 0.5;
-  const orderTotal = totalPrice + deliveryFee - discount;
-
-  const handleOrderNow = async () => {
-    const userId = (user as { id?: string })?.id;
-    if (!userId) {
-      Alert.alert("Please sign in", "You need to be signed in to place an order.");
-      return;
-    }
-    if (items.length === 0) {
-      Alert.alert("Empty cart", "Add items before placing an order.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const orderNumber = `E${Date.now()}`;
-      const orderDoc = await createOrder({
-        userId,
-        status: "received",
-        isPaid: false,
-        total: orderTotal,
-        orderNumber,
-      });
-
-      await Promise.all(
-        items.map((item) =>
-          createOrderItem({
-            orderId: orderDoc.$id,
-            menuId: item.id,
-            name: item.name,
-            price: item.price,
-            qty: item.quantity,
-            specialRequest: item.specialRequest?.trim() || undefined,
-          })
-        )
-      );
-
-      clearCart();
-      Alert.alert("Order placed", `Your order number is ${orderNumber}.`);
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Failed to place order.";
-      Alert.alert("Error", message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   return (
     <SafeAreaView className="bg-white h-full">
       <FlatList
         data={items}
         renderItem={({ item }) => <CartItem item={item} />}
-        keyExtractor={(item) => `${item.id}::${item.specialRequest ?? ""}`}
+        keyExtractor={(item) => item.id}
         contentContainerClassName="pb28 px-5 pt-5"
         ListHeaderComponent={() => <CustomHeader title="Your Cart" />}
         ListEmptyComponent={() => (
@@ -123,16 +69,12 @@ const Cart = () => {
                 <View className="border-t border-gray-300 my-2" />
                 <PaymentInfoStripe
                   label={`Total`}
-                  value={`$${orderTotal.toFixed(2)}`}
+                  value={`$${(totalPrice + 5 - 0.5).toFixed(2)}`}
                   labelStyle="base-bold !text-dark-100"
                   valueStyle="base-bold !text-dark-100 !text-right"
                 />
               </View>
-              <CustomButton
-                title="Order Now"
-                isLoading={isSubmitting}
-                onPress={handleOrderNow}
-              />
+              <CustomButton title="Order Now" />
             </View>
           )
         }

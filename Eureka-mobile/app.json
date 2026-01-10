@@ -1,4 +1,3 @@
-
 {
   "expo": {
     "name": "Eureka",
@@ -47,12 +46,12 @@
           "project": "eureka",
           "organization": "darius-deng"
         }
-      ]
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     }
   }
-  
 }

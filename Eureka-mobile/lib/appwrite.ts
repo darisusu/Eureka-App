@@ -12,7 +12,7 @@ export const appwriteConfig = {
     categoriesCollectionId: 'categories', 
     menuCollectionId: 'menu',
     ordersCollectionId: 'orders',
-    orderItemsCollectionId: 'order_items',
+    ordersItemsCollectionId: 'orders_items', 
 }
 
 export const client = new Client(); // create empty client (bridge between app and appwrite server)
@@ -62,13 +62,13 @@ export const createUser = async ({email,password,name}: CreateUserParams) => { /
     }
 }
 
-export const signIn = async ({email, password}: SignInParams) => {
-    try {
-        const session = await account.createEmailPasswordSession(email,password);
-    } catch (e) {
-        throw new Error(e as string);
-    }
-}
+export const signIn = async ({ email, password }: SignInParams) => {
+  try {
+    return await account.createEmailPasswordSession(email, password);
+  } catch (e) {
+    throw new Error(e instanceof Error ? e.message : String(e));
+  }
+};
 
 export const getCurrentUser = async (): Promise<User | null> => {
     try {
@@ -151,7 +151,7 @@ export const createOrder = async (order: Order) => {
 export const createOrderItem = async (item: OrderItem) => {
   return databases.createDocument(
     appwriteConfig.databaseId,
-    appwriteConfig.orderItemsCollectionId,
+    appwriteConfig.ordersItemsCollectionId,
     ID.unique(),
     item
   );
