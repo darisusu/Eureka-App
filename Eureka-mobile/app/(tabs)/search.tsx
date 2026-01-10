@@ -34,20 +34,11 @@ const Search = () => {
       <FlatList
         data={data}
         keyboardShouldPersistTaps="handled"
-        renderItem={({ item, index }) => {
-          const isFirstRightColItem = index % 2 === 0; // check if item is in the right column
-
-          return (
-            <View
-              className={cn(
-                "flex-1 max-w-[48%]",
-                !isFirstRightColItem ? "mt-10" : "mt-0"
-              )}
-            >
-              <MenuCard item={item as unknown as MenuItem} />
-            </View>
-          );
-        }}
+        renderItem={({ item }) => (
+          <View className={cn("flex-1 max-w-[48%]")}>
+            <MenuCard item={item as unknown as MenuItem} />
+          </View>
+        )}
         keyExtractor={(item) => item.$id} // distinct key for each item
         numColumns={2} // 2 columns for grid layout
         columnWrapperClassName="gap-7"
