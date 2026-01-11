@@ -11,6 +11,7 @@ import React, { useEffect } from "react";
 import { FlatList, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+
 const Search = () => {
   const { category, query } = useLocalSearchParams<{
     // get category and query from URL

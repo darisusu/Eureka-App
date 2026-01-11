@@ -1,4 +1,9 @@
 // Currently fixed cart page without dynamic data
+// TODO:
+// Dynamic fetching
+// Indication of estimated time taken for preparation according to items in queue and own order
+// Redirect to home page for order tracking after successful order placement
+
 
 import CartItem from "@/components/CartItem";
 import CustomButton from "@/components/CustomButton";
@@ -26,9 +31,17 @@ const PaymentInfoStripe = ({
   </View>
 );
 const Cart = () => {
-  const { items, getTotalItems, getTotalPrice } = useCartStore();
-  const totalItems = getTotalItems();
-  const totalPrice = getTotalPrice();
+  // const { items, getTotalItems, getTotalPrice } = useCartStore();
+  // const totalItems = getTotalItems();
+  // const totalPrice = getTotalPrice();
+  const items = useCartStore((s) => s.items);
+
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  const totalPrice = items.reduce(
+    (sum, item) => sum + item.quantity * item.price,
+    0
+  );
   const estimatedTime = {
     range: "20-30 min",
     note: "Based on current kitchen load",
@@ -39,7 +52,9 @@ const Cart = () => {
       <FlatList
         data={items}
         renderItem={({ item }) => <CartItem item={item} />}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) =>
+          `${item.id}:${item.specialRequest ?? ""}`
+        }
         contentContainerClassName="pb28 px-5 pt-5"
         ListHeaderComponent={() => <CustomHeader title="Your Cart" />}
         ListEmptyComponent={() => (
@@ -75,16 +90,10 @@ const Cart = () => {
                   value={`$${totalPrice.toFixed(2)}`}
                 />
 
-                <PaymentInfoStripe label={`Delivery Fee`} value={`$5.00`} />
-                <PaymentInfoStripe
-                  label={`Discount`}
-                  value={`- $0.50`}
-                  valueStyle="!text-success"
-                />
                 <View className="border-t border-gray-300 my-2" />
                 <PaymentInfoStripe
                   label={`Total`}
-                  value={`$${(totalPrice + 5 - 0.5).toFixed(2)}`}
+                  value={`$${totalPrice.toFixed(2)}`}
                   labelStyle="base-bold !text-dark-100"
                   valueStyle="base-bold !text-dark-100 !text-right"
                 />

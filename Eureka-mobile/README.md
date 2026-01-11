@@ -77,7 +77,6 @@ Required collections:
 - `orders` (userId, status, isPaid, total, orderNumber)
 - `order_items` (orderId, menuId, name, price, qty, specialRequest)
 
-Note: Old `customizations` and `menu_customizations` are removed.
 
 ## Running the App
 

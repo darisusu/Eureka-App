@@ -2,6 +2,10 @@ import React from "react";
 import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+//TODO:
+// Link with real user data from backend/store
+// Add history of orders placed
+
 const Profile = () => {
   return (
     <SafeAreaView className="bg-white h-full">
