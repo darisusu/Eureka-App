@@ -8,11 +8,13 @@
 import CartItem from "@/components/CartItem";
 import CustomButton from "@/components/CustomButton";
 import CustomHeader from "@/components/CustomHeader";
+import { createOrder, createOrderItem } from "@/lib/appwrite";
+import useAuthStore from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
 import type { PaymentInfoStripeProps } from "@/type";
 import cn from "clsx";
-import React from "react";
-import { FlatList, Text, View } from "react-native";
+import React, { useState } from "react";
+import { Alert, FlatList, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const PaymentInfoStripe = ({
@@ -31,20 +33,66 @@ const PaymentInfoStripe = ({
   </View>
 );
 const Cart = () => {
-  // const { items, getTotalItems, getTotalPrice } = useCartStore();
-  // const totalItems = getTotalItems();
-  // const totalPrice = getTotalPrice();
-  const items = useCartStore((s) => s.items);
+  const items = useCartStore((state) => state.items); 
+
+  const { clearCart } = useCartStore();
+  const { user } = useAuthStore();
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-
-  const totalPrice = items.reduce(
-    (sum, item) => sum + item.quantity * item.price,
-    0
-  );
+  const totalPrice = items.reduce((sum, item) => sum + item.quantity * item.price,0);
+  
+  // Mock estimated time data
   const estimatedTime = {
     range: "20-30 min",
     note: "Based on current kitchen load",
+  };
+
+  const handleOrderNow = async () => {
+    const userId = user?.id;
+    if (!userId) {
+      Alert.alert("Please sign in", "You need to be signed in to place an order.");
+      return;
+    }
+    if (totalItems === 0) {
+      Alert.alert("Empty cart", "Add items before placing an order.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const orderNumber = `E${Date.now()}`;
+      const orderDoc = await createOrder({
+        userId,
+        status: "received",
+        isPaid: false,
+        total: totalPrice,
+        orderNumber,
+      });
+
+      await Promise.all(
+        items.map((item) =>
+          createOrderItem({
+            orderId: orderDoc.$id,
+            menuId: item.id,
+            name: item.name,
+            price: item.price,
+            qty: item.quantity,
+            specialRequest: item.specialRequest?.trim() || undefined,
+          })
+        )
+      );
+
+      clearCart();
+      Alert.alert("Order placed", `Your order number is ${orderNumber}.`);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to place order.";
+      Alert.alert("Error", message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -55,7 +103,7 @@ const Cart = () => {
         keyExtractor={(item) =>
           `${item.id}:${item.specialRequest ?? ""}`
         }
-        contentContainerClassName="pb28 px-5 pt-5"
+        contentContainerClassName="pb-32 px-5 pt-5"
         ListHeaderComponent={() => <CustomHeader title="Your Cart" />}
         ListEmptyComponent={() => (
           <View className="flex-1 justify-center items-center">
@@ -98,7 +146,11 @@ const Cart = () => {
                   valueStyle="base-bold !text-dark-100 !text-right"
                 />
               </View>
-              <CustomButton title="Order Now" />
+              <CustomButton
+                title="Order Now"
+                isLoading={isSubmitting}
+                onPress={handleOrderNow}
+              />
             </View>
           )
         }
