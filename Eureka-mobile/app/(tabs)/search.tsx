@@ -1,6 +1,7 @@
 import CartButton from "@/components/CartButton";
 import Filter from "@/components/Filter";
 import MenuCard from "@/components/MenuCard";
+import { CHECKOUT_BAR_HEIGHT } from "@/components/CheckoutBar";
 import SearchBar from "@/components/SearchBar";
 import { getCategories, getMenu } from "@/lib/appwrite";
 import useAppwrite from "@/lib/useAppwrite";
@@ -9,10 +10,11 @@ import cn from "clsx";
 import { useLocalSearchParams } from "expo-router";
 import React, { useEffect } from "react";
 import { FlatList, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 
 const Search = () => {
+  const insets = useSafeAreaInsets();
   const { category, query } = useLocalSearchParams<{
     // get category and query from URL
     query: string;
@@ -43,7 +45,11 @@ const Search = () => {
         keyExtractor={(item) => item.$id} // distinct key for each item
         numColumns={2} // 2 columns for grid layout
         columnWrapperClassName="gap-7"
-        contentContainerClassName="gap-7 px-5 pb-32"
+        contentContainerClassName="gap-7 px-5"
+        contentContainerStyle={{
+          paddingBottom:
+            insets.bottom + 40 + 80 + 12 + CHECKOUT_BAR_HEIGHT + 16,
+        }}
         ListHeaderComponent={() => (
           <View className="my-5 gap-5">
             <View className="flex-between flex-row w-full">
