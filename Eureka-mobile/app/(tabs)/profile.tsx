@@ -13,7 +13,7 @@ import { router } from "expo-router";
 
 const Profile = () => {
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const { setIsAuthenticated, setUser } = useAuthStore();
+  const { user, isLoading, setIsAuthenticated, setUser } = useAuthStore();
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -21,7 +21,7 @@ const Profile = () => {
       await signOut();
       setIsAuthenticated(false);
       setUser(null);
-      router.replace("/sign-in");
+      router.replace("/sign-in"); // Redirect to sign-in page after logout
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to log out.";
@@ -39,14 +39,14 @@ const Profile = () => {
         <View className="mt-6">
           <Text className="paragraph-bold text-dark-100">Name</Text>
           <Text className="paragraph-medium text-gray-100 mt-1">
-            Darius Deng
+            {isLoading ? "Loading..." : user?.name ?? "—"}
           </Text>
         </View>
 
         <View className="mt-4">
           <Text className="paragraph-bold text-dark-100">Email</Text>
           <Text className="paragraph-medium text-gray-100 mt-1">
-            darius@eureka.app
+            {isLoading ? "Loading..." : user?.email ?? "—"}
           </Text>
         </View>
 
