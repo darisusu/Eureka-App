@@ -1,7 +1,8 @@
-import { Text, View, Dimensions, ScrollView } from "react-native";
+import { Text, View, Dimensions, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFonts, PlayfairDisplay_900Black } from "@expo-google-fonts/playfair-display";
 import { Feather } from "@expo/vector-icons"; // Icon for the timer
+import { router } from "expo-router";
 
 //TODO:
 // Link up with real order data from backend/store
@@ -162,6 +163,14 @@ export default function Index() {
               </View>
             </View>
           </View>
+
+          <TouchableOpacity
+            onPress={() => router.push("/search")}
+            className="bg-primary rounded-full py-4 px-6 items-center"
+            activeOpacity={0.9}
+          >
+            <Text className="text-white text-lg font-bold">Order Now</Text>
+          </TouchableOpacity>
 
         </ScrollView>
       </SafeAreaView>
