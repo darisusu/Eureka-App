@@ -33,7 +33,24 @@ const Search = () => {
   }, [category, query]); // runs function when category or query changes
 
   return (
-    <SafeAreaView className="bg-white h-full">
+    <SafeAreaView className="bg-gray-50 h-full">
+      <View className="mt-5 mb-2 gap-4 px-5">
+        <View className="flex-between flex-row w-full">
+          <View className="flex-start">
+            <Text className="small-bold uppercase text-primary">Search</Text>
+
+            <View className="flex-start flex-row gap-x-1 mt-0.5">
+              <Text className="paragraph-semibold text-dark-100">
+                Find your favourite food!
+              </Text>
+            </View>
+          </View>
+
+          <CartButton />
+        </View>
+        <SearchBar />
+        <Filter categories={(categories as unknown as Category[]) || []} />
+      </View>
       <FlatList
         data={data}
         keyboardShouldPersistTaps="handled"
@@ -50,27 +67,6 @@ const Search = () => {
           paddingBottom:
             insets.bottom + 40 + 80 + 12 + CHECKOUT_BAR_HEIGHT + 16,
         }}
-        ListHeaderComponent={() => (
-          <View className="my-5 gap-5">
-            <View className="flex-between flex-row w-full">
-              <View className="flex-start">
-                <Text className="small-bold uppercase text-primary">
-                  Search
-                </Text>
-
-                <View className="flex-start flex-row gap-x-1 mt-0.5">
-                  <Text className="paragraph-semibold text-dark-100">
-                    Find your favourite food!
-                  </Text>
-                </View>
-              </View>
-
-              <CartButton />
-            </View>
-            <SearchBar />
-            <Filter categories={(categories as unknown as Category[]) || []} />
-          </View>
-        )}
         ListEmptyComponent={() => !loading && <Text>No results</Text>}
       />
     </SafeAreaView>
