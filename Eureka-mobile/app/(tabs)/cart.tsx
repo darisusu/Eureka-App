@@ -17,7 +17,8 @@ import React, { useState } from "react";
 import { Alert, FlatList, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const PaymentInfoStripe = ({
+// Payment Summary component
+const PaymentSummaryRow = ({
   label,
   value,
   labelStyle,
@@ -32,6 +33,7 @@ const PaymentInfoStripe = ({
     </Text>
   </View>
 );
+
 const Cart = () => {
   const items = useCartStore((state) => state.items); 
 
@@ -60,9 +62,11 @@ const Cart = () => {
       return;
     }
 
+    //TODO: move order creation logic to lib/appwrite.ts
+    //TODO: ensure prepayment success before order creation
     setIsSubmitting(true);
     try {
-      const orderNumber = `E${Date.now()}`;
+      const orderNumber = `E${Date.now()}`; // TODO: Better order number generation, server side
       const orderDoc = await createOrder({
         userId,
         status: "received",
@@ -71,6 +75,7 @@ const Cart = () => {
         orderNumber,
       });
 
+      // Create order items
       await Promise.all(
         items.map((item) =>
           createOrderItem({
@@ -133,13 +138,13 @@ const Cart = () => {
                   Payment Summary
                 </Text>
 
-                <PaymentInfoStripe
+                <PaymentSummaryRow
                   label={`Total Items (${totalItems})`}
                   value={`$${totalPrice.toFixed(2)}`}
                 />
 
                 <View className="border-t border-gray-300 my-2" />
-                <PaymentInfoStripe
+                <PaymentSummaryRow
                   label={`Total`}
                   value={`$${totalPrice.toFixed(2)}`}
                   labelStyle="base-bold !text-dark-100"

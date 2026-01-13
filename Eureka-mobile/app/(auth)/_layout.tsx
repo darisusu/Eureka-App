@@ -13,9 +13,13 @@ import {
 
 export default function AuthLayout() {
   const { isAuthenticated } = useAuthStore();
+
+  // if (!isAuthReady) return null; // TODO: or a loading component/spinner
+
   if (isAuthenticated) {
     return <Redirect href="/" />;
   }
+  
 
   return (
     <KeyboardAvoidingView

@@ -30,6 +30,8 @@ export const storage = new Storage(client);
 const avatars = new Avatars(client);
 
 
+//TODO: centralise order creation logic here
+
 //defining functions that interact with appwrite services
 export const createUser = async ({email,password,name}: CreateUserParams) => { // parameter type: CreateUserParams, destructured so can use each field directly
     try {
@@ -65,6 +67,14 @@ export const createUser = async ({email,password,name}: CreateUserParams) => { /
 export const signIn = async ({ email, password }: SignInParams) => {
   try {
     return await account.createEmailPasswordSession(email, password);
+  } catch (e) {
+    throw new Error(e instanceof Error ? e.message : String(e));
+  }
+};
+
+export const signOut = async () => {
+  try {
+    return await account.deleteSession("current");
   } catch (e) {
     throw new Error(e instanceof Error ? e.message : String(e));
   }
@@ -181,7 +191,6 @@ export const placeOrder = async ({ userId, items, total }: { userId: string; ite
 
   return orderDoc;
 };
-
 
 
 

@@ -1,12 +1,36 @@
-import React from "react";
-import { ScrollView, Text, View } from "react-native";
+import React, { useState } from "react";
+import { Alert, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import CustomButton from "@/components/CustomButton";
+import { signOut } from "@/lib/appwrite";
+import useAuthStore from "@/store/auth.store";
+import { router } from "expo-router";
 
 //TODO:
 // Link with real user data from backend/store
 // Add history of orders placed
+// Add sign out functionality
 
 const Profile = () => {
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const { setIsAuthenticated, setUser } = useAuthStore();
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      await signOut();
+      setIsAuthenticated(false);
+      setUser(null);
+      router.replace("/sign-in");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to log out.";
+      Alert.alert("Error", message);
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
+
   return (
     <SafeAreaView className="bg-white h-full">
       <ScrollView contentContainerClassName="px-6 pt-8 pb-24">
@@ -26,6 +50,12 @@ const Profile = () => {
           </Text>
         </View>
 
+        <CustomButton
+          title="Log out"
+          onPress={handleSignOut}
+          style="mt-10 bg-red-500"
+          isLoading={isSigningOut}
+        />
       </ScrollView>
     </SafeAreaView>
   );
