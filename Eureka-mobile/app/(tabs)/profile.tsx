@@ -8,8 +8,24 @@ import { router } from "expo-router";
 
 //TODO:
 // Link with real user data from backend/store
-// Add history of orders placed
 // Add sign out functionality
+
+const pastOrders = [
+  {
+    id: "E2847",
+    date: "Jan 12, 2025",
+    total: 18.5,
+    status: "Collected",
+    items: "2x Sliced Fish Soup, 1x Teh C",
+  },
+  {
+    id: "E2719",
+    date: "Jan 08, 2025",
+    total: 9.0,
+    status: "Ready",
+    items: "1x Fish Soup",
+  },
+];
 
 const Profile = () => {
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -48,6 +64,44 @@ const Profile = () => {
           <Text className="paragraph-medium text-gray-100 mt-1">
             {isLoading ? "Loading..." : user?.email ?? "—"}
           </Text>
+        </View>
+
+        <View className="mt-8">
+          <Text className="h3-bold text-dark-100">Past Orders</Text>
+          <View className="mt-4 gap-4">
+            {pastOrders.length === 0 ? (
+              <Text className="paragraph-medium text-gray-200">
+                No past orders yet.
+              </Text>
+            ) : (
+              pastOrders.map((order) => (
+                <View
+                  key={order.id}
+                  className="border border-gray-200 rounded-2xl p-4 bg-white"
+                >
+                  <View className="flex-row justify-between items-center">
+                    <Text className="paragraph-bold text-dark-100">
+                      {order.id}
+                    </Text>
+                    <Text className="paragraph-regular text-gray-200">
+                      {order.date}
+                    </Text>
+                  </View>
+                  <Text className="paragraph-regular text-gray-200 mt-2">
+                    {order.items}
+                  </Text>
+                  <View className="flex-row justify-between items-center mt-3">
+                    <Text className="paragraph-bold text-dark-100">
+                      ${order.total.toFixed(2)}
+                    </Text>
+                    <Text className="paragraph-bold text-primary">
+                      {order.status}
+                    </Text>
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
         </View>
 
         <CustomButton
