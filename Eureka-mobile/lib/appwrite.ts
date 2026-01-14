@@ -17,20 +17,16 @@ export const appwriteConfig = {
 
 export const client = new Client(); // create empty client (bridge between app and appwrite server)
 
-//Configure client
+//Configure client and set up connection to appwrite
 client
     .setEndpoint(appwriteConfig.endpoint!) 
     .setProject(appwriteConfig.projectId!)
     .setPlatform(appwriteConfig.platform);
 
-
 export const account = new Account(client);
 export const databases = new Databases(client);
 export const storage = new Storage(client);
 const avatars = new Avatars(client);
-
-
-//TODO: centralise order creation logic here
 
 //defining functions that interact with appwrite services
 export const createUser = async ({email,password,name}: CreateUserParams) => { // parameter type: CreateUserParams, destructured so can use each field directly
@@ -167,13 +163,21 @@ export const createOrderItem = async (item: OrderItem) => {
   );
 };
 
+const makeOrderNumber = () => {
+    const d = new Date();
+    const pad2 = (n: number) => n.toString().padStart(2, '0');
+    const hh = pad2(d.getHours());
+    const mm = pad2(d.getMinutes());
+    const rand = String(Math.floor(Math.floor(Math.random()*1000))).padStart(3, '0'); 
+    return `E${rand}${hh}${mm}`;
+}
 export const placeOrder = async ({ userId, items, total }: { userId: string; items: CartItemType[]; total: number }) => {
     const orderDoc = await createOrder({
         userId,
-        orderNumber: `E${Math.floor(100000 + Math.random() * 900000)}`, // random 6 digit order number
+        orderNumber: makeOrderNumber(),
         status: "received",
         isPaid: false,
-        total,
+        total
     });
     
   await Promise.all( // runs parallel, waits for all order items to be created
@@ -184,7 +188,7 @@ export const placeOrder = async ({ userId, items, total }: { userId: string; ite
         name: item.name,
         price: item.price,
         qty: item.quantity,
-        specialRequest: item.specialRequest ?? "",
+        specialRequest: item.specialRequest?.trim() ? item.specialRequest : undefined,
       })
     )
   );

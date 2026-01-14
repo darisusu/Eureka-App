@@ -8,7 +8,7 @@
 import CartItem from "@/components/CartItem";
 import CustomButton from "@/components/CustomButton";
 import CustomHeader from "@/components/CustomHeader";
-import { createOrder, createOrderItem } from "@/lib/appwrite";
+import { createOrder, createOrderItem, placeOrder } from "@/lib/appwrite";
 import useAuthStore from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
 import type { PaymentInfoStripeProps } from "@/type";
@@ -61,36 +61,16 @@ const Cart = () => {
       Alert.alert("Empty cart", "Add items before placing an order.");
       return;
     }
-
-    //TODO: move order creation logic to lib/appwrite.ts
     //TODO: ensure prepayment success before order creation
     setIsSubmitting(true);
     try {
-      const orderNumber = `E${Date.now()}`; // TODO: Better order number generation, server side
-      const orderDoc = await createOrder({
-        userId,
-        status: "received",
-        isPaid: false,
-        total: totalPrice,
-        orderNumber,
-      });
+      const orderDoc = await placeOrder({ userId, items, total: totalPrice });
 
-      // Create order items
-      await Promise.all(
-        items.map((item) =>
-          createOrderItem({
-            orderId: orderDoc.$id,
-            menuId: item.id,
-            name: item.name,
-            price: item.price,
-            qty: item.quantity,
-            specialRequest: item.specialRequest?.trim() || undefined,
-          })
-        )
-      );
+      // TODO: Ensure successful order placement and payment
+      clearCart(); 
 
-      clearCart();
-      Alert.alert("Order placed", `Your order number is ${orderNumber}.`);
+      Alert.alert("Order placed", `Your order number is ${orderDoc.orderNumber}.`);
+
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Failed to place order.";
