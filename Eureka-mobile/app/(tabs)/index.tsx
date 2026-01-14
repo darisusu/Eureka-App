@@ -46,14 +46,6 @@ export default function Index() {
 
   return (
     <View className="flex-1 bg-gray-50">
-      {/* =================================================
-          LAYER 1: BACKGROUND (Orange + Curve)
-      ================================================= */}
-      <View 
-        className="absolute top-0 left-0 right-0 bg-orange-600" 
-        style={{ height: HEADER_HEIGHT }} 
-      />
-      
       <View 
         className="absolute w-[200%] h-[100%] bg-gray-50 rounded-full -left-[50%]" 
         style={{ top: HEADER_HEIGHT }} 
@@ -67,7 +59,7 @@ export default function Index() {
         style={{ height: HEADER_HEIGHT, top: -20 }}
       >
         <Text 
-          className="text-white shadow-sm opacity-90"
+          className="text-primary shadow-sm opacity-90"
           style={{ 
             fontFamily: "PlayfairDisplay_900Black", 
             fontSize: FONT_SIZE, 
@@ -89,7 +81,7 @@ export default function Index() {
       <SafeAreaView className="flex-1" edges={['bottom']}>
         <ScrollView 
           contentContainerStyle={{ flexGrow: 1, paddingTop: HEADER_HEIGHT - 60 }}
-          className="px-6"
+          className="px-6 -mt-2"
           showsVerticalScrollIndicator={false}
         >
           {/* THE ORDER CARD */}

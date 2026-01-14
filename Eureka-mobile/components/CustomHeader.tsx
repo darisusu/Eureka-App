@@ -4,12 +4,17 @@ import { Image, Text, TouchableOpacity, View } from "react-native";
 import { images } from "@/constants";
 import { CustomHeaderProps } from "@/type";
 
-const CustomHeader = ({ title }: CustomHeaderProps) => {
+const CustomHeader = ({
+  title,
+  backHref,
+}: CustomHeaderProps & { backHref?: string }) => {
   const router = useRouter();
 
   return (
     <View className="custom-header">
-      <TouchableOpacity onPress={() => router.back()}>
+      <TouchableOpacity
+        onPress={() => (backHref ? router.replace(backHref) : router.back())}
+      >
         <Image
           source={images.arrowBack}
           className="size-5"

@@ -35,22 +35,18 @@ const Search = () => {
   return (
     <SafeAreaView className="bg-gray-50 h-full">
       <View className="mt-5 mb-2 gap-4 px-5">
-        <View className="flex-between flex-row w-full items-center">
-          <View className="flex-1 items-center">
-            <Text className="text-3xl font-bold text-primary text-center">
-              Start Ordering Now!
-            </Text>
+        <View className="flex-between flex-row w-full items-center gap-3">
+          <View className="flex-1">
+            <View className="bg-white border border-gray-200 rounded-2xl px-5 py-3">
+              <Text className="paragraph-regular text-gray-200">
+                Preparing{" "}
+                <Text className="paragraph-bold text-primary">5</Text> orders,
+                estimated time{" "}
+                <Text className="paragraph-bold text-primary">20</Text> min
+              </Text>
+            </View>
           </View>
-
           <CartButton />
-        </View>
-        <View className="bg-white border border-gray-200 rounded-2xl px-5 py-3">
-          <Text className="paragraph-regular text-gray-200">
-            Preparing{" "}
-            <Text className="paragraph-bold text-primary">5</Text> orders,
-            estimated time{" "}
-            <Text className="paragraph-bold text-primary">20</Text> min
-          </Text>
         </View>
         <SearchBar />
         <Filter categories={(categories as unknown as Category[]) || []} />

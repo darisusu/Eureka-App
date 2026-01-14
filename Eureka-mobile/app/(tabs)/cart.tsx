@@ -109,7 +109,9 @@ const Cart = () => {
           `${item.id}:${item.specialRequest ?? ""}`
         }
         contentContainerClassName="pb-32 px-5 pt-5"
-        ListHeaderComponent={() => <CustomHeader title="Your Cart" />}
+        ListHeaderComponent={() => (
+          <CustomHeader title="Your Cart" backHref="/search" />
+        )}
         ListEmptyComponent={() => (
           <View className="flex-1 justify-center items-center">
             <View className="pt-2 pb-1">
