@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 
 import { images } from "@/constants";
@@ -7,7 +7,7 @@ import { CustomHeaderProps } from "@/type";
 const CustomHeader = ({
   title,
   backHref,
-}: CustomHeaderProps & { backHref?: string }) => {
+}: CustomHeaderProps & { backHref?: Href }) => {
   const router = useRouter();
 
   return (
