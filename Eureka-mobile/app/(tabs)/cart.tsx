@@ -8,7 +8,7 @@
 import CartItem from "@/components/CartItem";
 import CustomButton from "@/components/CustomButton";
 import CustomHeader from "@/components/CustomHeader";
-import { createOrder, createOrderItem, placeOrder } from "@/lib/appwrite";
+import { placeOrder } from "@/lib/appwrite";
 import useAuthStore from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
 import type { PaymentInfoStripeProps } from "@/type";
@@ -68,13 +68,12 @@ const Cart = () => {
 
       // TODO: Ensure successful order placement and payment
       clearCart(); 
-
       Alert.alert("Order placed", `Your order number is ${orderDoc.orderNumber}.`);
 
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Failed to place order.";
-      Alert.alert("Error", message);
+        Alert.alert("Error", message);
     } finally {
       setIsSubmitting(false);
     }
