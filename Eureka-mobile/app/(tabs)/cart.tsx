@@ -14,7 +14,7 @@ import { useCartStore } from "@/store/cart.store";
 import type { PaymentInfoStripeProps } from "@/type";
 import cn from "clsx";
 import React, { useState } from "react";
-import { Alert, FlatList, Text, View } from "react-native";
+import { Alert, FlatList, Image, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Payment Summary component
@@ -112,8 +112,16 @@ const Cart = () => {
         ListHeaderComponent={() => <CustomHeader title="Your Cart" />}
         ListEmptyComponent={() => (
           <View className="flex-1 justify-center items-center">
-            <View className = "p-5"><Text className="text-4xl">🛒</Text></View>
-            <Text className="h3-bold text-dark-100">Your cart is empty</Text>
+            <View className="pt-2 pb-1">
+              <Image
+                source={require("../../assets/mascots/Fish-Sleep.png")}
+                className="w-64 h-64"
+                resizeMode="contain"
+              />
+            </View>
+            <Text className="h3-bold text-dark-100 -mt-16">
+              Your cart is empty
+            </Text>
             <Text className="paragraph-regular text-gray-200 text-center mt-2">
               Looks like you haven't added{"\n"}any food to your cart yet.
             </Text>

@@ -34,7 +34,7 @@ const SignUp = () => {
 
   
   return (
-    <View className = "gap-10 bg-white rounded-lg p-5 mt-5">
+    <View className = "gap-10 bg-white rounded-lg p-5">
         
         <CustomInput
           placeholder = "Enter your full name"
@@ -70,7 +70,7 @@ const SignUp = () => {
             onPress = {submit} //call submit funciton
         />
 
-        <View className = "flex justify-center mt-5 flex-row gap-2 px-1">
+        <View className = "flex justify-center flex-row gap-2 px-1">
           <Text className = "base-regular text-gray-100">
             Already have an account?
           </Text>

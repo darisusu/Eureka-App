@@ -1,5 +1,6 @@
+import { images } from "@/constants";
 import React, { useState } from "react";
-import { Alert, ScrollView, Text, View } from "react-native";
+import { Alert, Image, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CustomButton from "@/components/CustomButton";
 import { signOut } from "@/lib/appwrite";
@@ -108,6 +109,14 @@ const Profile = () => {
           title="Log out"
           onPress={handleSignOut}
           style="mt-10 bg-red-500"
+          leftIcon={
+            <Image
+              source={images.logout}
+              className="w-5 h-5 mr-2"
+              resizeMode="contain"
+              tintColor="#FFFFFF"
+            />
+          }
           isLoading={isSigningOut}
         />
       </ScrollView>

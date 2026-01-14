@@ -121,7 +121,7 @@ const MenuCard = ({
                 Note to restaurant / Special Request (optional)
               </Text>
               <TextInput
-                className="mt-2 rounded-lg border border-gray-200 p-3 text-sm"
+                className="mt-2 rounded-lg border border-gray-200 px-3 py-2.5 text-sm leading-5"
                 placeholder="Add your request (subject to restaurant discretion)"
                 placeholderTextColor="#A0A0A0"
                 maxLength={200}

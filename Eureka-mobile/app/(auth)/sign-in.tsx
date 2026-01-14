@@ -40,7 +40,7 @@ const SignIn = () => {
 
   // UI rendering
   return (
-    <View className="gap-10 bg-white rounded-lg p-5 mt-5">
+    <View className="gap-10 bg-white rounded-lg p-5">
       <CustomInput
         placeholder="Enter your email"
         value={form.email}
@@ -68,7 +68,7 @@ const SignIn = () => {
       />
 
       
-      <View className="flex justify-center mt-5 flex-row gap-2 px-1">
+      <View className="flex justify-center flex-row gap-2 px-1">
         <Text className="base-regular text-gray-100">
           Don't have an account?
         </Text>

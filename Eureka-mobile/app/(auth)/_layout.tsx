@@ -1,15 +1,14 @@
-import { images } from "@/constants";
 import useAuthStore from "@/store/auth.store";
 import { Redirect, Slot } from "expo-router";
 import {
-  Dimensions,
   Image,
-  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Text,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function AuthLayout() {
   const { isAuthenticated } = useAuthStore();
@@ -22,30 +21,32 @@ export default function AuthLayout() {
   
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS == "ios" ? "padding" : "height"}
-    >
-      <ScrollView
-        className="bg-white h-full"
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView className="bg-white h-full">
+      <KeyboardAvoidingView
+        behavior={Platform.OS == "ios" ? "padding" : "height"}
+        className="flex-1"
       >
-        <View
-          className="w-full relative"
-          style={{ height: Dimensions.get("screen").height / 2.25 }}
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerClassName="flex-grow px-6 pt-8 pb-8"
         >
-          <ImageBackground
-            source={images.loginGraphic}
-            className="size-full rounded-b-lg"
-            resizeMode="stretch"
-          />
-          <Image
-            source={images.logo}
-            className="self-center size-48 absolute -bottom-16 z-10"
-          />
-        </View>
-
-        <Slot />
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <View className="items-center">
+            <View className="w-64">
+              <Text className="text-2xl font-bold text-dark-100 text-center">
+                Welcome to EUREKA
+              </Text>
+            </View>
+            <Image
+              source={require("../../assets/mascots/Fish-Default.png")}
+              className="w-64 h-64 -mt-6"
+              resizeMode="contain"
+            />
+          </View>
+          <View className="w-full -mt-20">
+            <Slot />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }

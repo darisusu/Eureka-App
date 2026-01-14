@@ -40,7 +40,7 @@ const SearchBar = () => {
       </TouchableOpacity>
 
       <TextInput
-        className="flex-1 p-5"
+        className="flex-1 py-2 px-3"
         placeholder="Search for food you want..."
         value={query}
         onChangeText={handleSearch}
