@@ -25,7 +25,19 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// Payment Summary component
+const SectionCard = ({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <View className={cn("border border-gray-200 p-5 rounded-2xl", className)}>
+    {children}
+  </View>
+);
+
+// Payment Summary Row 
 const PaymentSummaryRow = ({
   label,
   value,
@@ -47,7 +59,7 @@ const PromoCodeSection = () => {
   const [promoCode, setPromoCode] = useState("");
 
   return (
-    <View className="border border-gray-200 p-5 rounded-2xl bg-white">
+    <SectionCard className="bg-white">
       <Text className="h3-bold text-dark-100 mb-4">Promo Code</Text>
       <View className="flex-row items-center gap-4">
         <TextInput
@@ -77,10 +89,50 @@ const PromoCodeSection = () => {
           <Text className="text-white text-base font-semibold">Redeem</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SectionCard>
   );
 };
 
+// Estimated Time card
+const EstimatedTimeCard = ({estimatedTime}: {
+estimatedTime: { range: string; note: string };
+}) => (
+  <SectionCard>
+    <Text className="h3-bold text-dark-100 mb-2">Estimated Time</Text>
+    <Text className="text-2xl font-bold text-dark-100">
+      {estimatedTime.range}
+    </Text>
+    <Text className="paragraph-regular text-gray-200 mt-1">
+      {estimatedTime.note}
+    </Text>
+  </SectionCard>
+);
+
+// Payment Summary Card
+const PaymentSummaryCard = ({
+  totalItems,
+  totalPrice,
+}: {
+  totalItems: number;
+  totalPrice: number;
+}) => (
+  <SectionCard>
+    <Text className="h3-bold text-dark-100 mb-5">Payment Summary</Text>
+    <PaymentSummaryRow
+      label={`Total Items (${totalItems})`}
+      value={`$${totalPrice.toFixed(2)}`}
+    />
+    <View className="border-t border-gray-300 my-2" />
+    <PaymentSummaryRow
+      label={`Total`}
+      value={`$${totalPrice.toFixed(2)}`}
+      labelStyle="base-bold !text-dark-100"
+      valueStyle="base-bold !text-dark-100 !text-right"
+    />
+  </SectionCard>
+);
+
+// Entire Section below item list
 const CartFooter = ({
   totalItems,
   totalPrice,
@@ -98,32 +150,9 @@ const CartFooter = ({
 
   return (
     <View className="gap-5">
-      <View className="border border-gray-200 p-5 rounded-2xl">
-        <Text className="h3-bold text-dark-100 mb-2">Estimated Time</Text>
-        <Text className="text-2xl font-bold text-dark-100">
-          {estimatedTime.range}
-        </Text>
-        <Text className="paragraph-regular text-gray-200 mt-1">
-          {estimatedTime.note}
-        </Text>
-      </View>
+      <EstimatedTimeCard estimatedTime={estimatedTime} />
       <PromoCodeSection />
-      <View className="border border-gray-200 p-5 rounded-2xl">
-        <Text className="h3-bold text-dark-100 mb-5">Payment Summary</Text>
-
-        <PaymentSummaryRow
-          label={`Total Items (${totalItems})`}
-          value={`$${totalPrice.toFixed(2)}`}
-        />
-
-        <View className="border-t border-gray-300 my-2" />
-        <PaymentSummaryRow
-          label={`Total`}
-          value={`$${totalPrice.toFixed(2)}`}
-          labelStyle="base-bold !text-dark-100"
-          valueStyle="base-bold !text-dark-100 !text-right"
-        />
-      </View>
+      <PaymentSummaryCard totalItems={totalItems} totalPrice={totalPrice} />
       <CustomButton
         title="Order Now"
         isLoading={isSubmitting}
