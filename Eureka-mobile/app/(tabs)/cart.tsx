@@ -42,6 +42,7 @@ const PaymentSummaryRow = ({
   </View>
 );
 
+//TODO: integrate with promo code system in appwritem, ensure only valid codes can be applied
 const PromoCodeSection = () => {
   const [promoCode, setPromoCode] = useState("");
 
