@@ -14,7 +14,15 @@ import { useCartStore } from "@/store/cart.store";
 import type { PaymentInfoStripeProps } from "@/type";
 import cn from "clsx";
 import React, { useState } from "react";
-import { Alert, FlatList, Image, Text, View } from "react-native";
+import {
+  Alert,
+  FlatList,
+  Image,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Payment Summary component
@@ -34,8 +42,98 @@ const PaymentSummaryRow = ({
   </View>
 );
 
+const PromoCodeSection = () => {
+  const [promoCode, setPromoCode] = useState("");
+
+  return (
+    <View className="border border-gray-200 p-5 rounded-2xl bg-white">
+      <Text className="h3-bold text-dark-100 mb-4">Promo Code</Text>
+      <View className="flex-row items-center gap-4">
+        <TextInput
+          className="flex-1 rounded-full bg-slate-50 px-5 py-2.5 text-base leading-5"
+          placeholder="Enter promo code here"
+          placeholderTextColor="#B8BCC5"
+          value={promoCode}
+          onChangeText={setPromoCode}
+          autoCapitalize="none"
+        />
+        <TouchableOpacity
+          onPress={() => {
+            if (!promoCode.trim()) {
+              Alert.alert("Promo code", "Please enter a code.");
+              return;
+            }
+            const normalizedCode = promoCode.trim().toUpperCase();
+            setPromoCode(normalizedCode);
+            Alert.alert("Promo code", `Code applied: ${normalizedCode}`);
+          }}
+          className={cn(
+            "rounded-full px-6 py-3",
+            promoCode.trim().length > 0 ? "bg-primary" : "bg-gray-300"
+          )}
+          activeOpacity={0.85}
+        >
+          <Text className="text-white text-base font-semibold">Redeem</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+const CartFooter = ({
+  totalItems,
+  totalPrice,
+  estimatedTime,
+  isSubmitting,
+  onOrderNow,
+}: {
+  totalItems: number;
+  totalPrice: number;
+  estimatedTime: { range: string; note: string };
+  isSubmitting: boolean;
+  onOrderNow: () => void;
+}) => {
+  if (totalItems === 0) return null;
+
+  return (
+    <View className="gap-5">
+      <View className="border border-gray-200 p-5 rounded-2xl">
+        <Text className="h3-bold text-dark-100 mb-2">Estimated Time</Text>
+        <Text className="text-2xl font-bold text-dark-100">
+          {estimatedTime.range}
+        </Text>
+        <Text className="paragraph-regular text-gray-200 mt-1">
+          {estimatedTime.note}
+        </Text>
+      </View>
+      <PromoCodeSection />
+      <View className="border border-gray-200 p-5 rounded-2xl">
+        <Text className="h3-bold text-dark-100 mb-5">Payment Summary</Text>
+
+        <PaymentSummaryRow
+          label={`Total Items (${totalItems})`}
+          value={`$${totalPrice.toFixed(2)}`}
+        />
+
+        <View className="border-t border-gray-300 my-2" />
+        <PaymentSummaryRow
+          label={`Total`}
+          value={`$${totalPrice.toFixed(2)}`}
+          labelStyle="base-bold !text-dark-100"
+          valueStyle="base-bold !text-dark-100 !text-right"
+        />
+      </View>
+      <CustomButton
+        title="Order Now"
+        isLoading={isSubmitting}
+        onPress={onOrderNow}
+      />
+    </View>
+  );
+};
+
 const Cart = () => {
-  const items = useCartStore((state) => state.items); 
+  const items = useCartStore((state) => state.items);
 
   const { clearCart } = useCartStore();
   const { user } = useAuthStore();
@@ -43,8 +141,11 @@ const Cart = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = items.reduce((sum, item) => sum + item.quantity * item.price,0);
-  
+  const totalPrice = items.reduce(
+    (sum, item) => sum + item.quantity * item.price,
+    0
+  );
+
   // Mock estimated time data
   const estimatedTime = {
     range: "20-30 min",
@@ -108,45 +209,14 @@ const Cart = () => {
             </Text>
           </View>
         )}
-        ListFooterComponent={() =>
-          totalItems > 0 && (
-            <View className="gap-5">
-              <View className="border border-gray-200 p-5 rounded-2xl">
-                <Text className="h3-bold text-dark-100 mb-2">
-                  Estimated Time
-                </Text>
-                <Text className="text-2xl font-bold text-dark-100">
-                  {estimatedTime.range}
-                </Text>
-                <Text className="paragraph-regular text-gray-200 mt-1">
-                  {estimatedTime.note}
-                </Text>
-              </View>
-              <View className="mt-6 border border-gray-200 p-5 rounded-2xl">
-                <Text className="h3-bold text-dark-100 mb-5">
-                  Payment Summary
-                </Text>
-
-                <PaymentSummaryRow
-                  label={`Total Items (${totalItems})`}
-                  value={`$${totalPrice.toFixed(2)}`}
-                />
-
-                <View className="border-t border-gray-300 my-2" />
-                <PaymentSummaryRow
-                  label={`Total`}
-                  value={`$${totalPrice.toFixed(2)}`}
-                  labelStyle="base-bold !text-dark-100"
-                  valueStyle="base-bold !text-dark-100 !text-right"
-                />
-              </View>
-              <CustomButton
-                title="Order Now"
-                isLoading={isSubmitting}
-                onPress={handleOrderNow}
-              />
-            </View>
-          )
+        ListFooterComponent={
+          <CartFooter
+            totalItems={totalItems}
+            totalPrice={totalPrice}
+            estimatedTime={estimatedTime}
+            isSubmitting={isSubmitting}
+            onOrderNow={handleOrderNow}
+          />
         }
       />
     </SafeAreaView>
