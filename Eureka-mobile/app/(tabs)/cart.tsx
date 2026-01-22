@@ -234,7 +234,8 @@ const Cart = () => {
   );
   const discountCents = appliedPromo?.discountCents ?? 0;
 
-  // Revalidate promo discount when cart subtotal changes (keeps percent promos accurate).
+  // useEffect autoupdates when values it watches change i.e [appliedPromo, subtotalCents, user?.id]
+  // Auto updates promo discount amt when cart subtotal changes.
   useEffect(() => {
     if (!appliedPromo) return;
     if (!user?.id || subtotalCents <= 0) {
