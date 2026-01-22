@@ -273,14 +273,17 @@ export const createOrder = async (order: Order) => {
   );
 };
 
+// create AppWrite PromoRedemption record after successful order placement
 export const createPromoRedemption = async ({
   promoId,
   userId,
   discountCents,
+  orderId,
 }: {
   promoId: string;
   userId: string;
   discountCents?: number;
+  orderId: string;
 }) => {
   return databases.createDocument(
     appwriteConfig.databaseId,
@@ -289,6 +292,7 @@ export const createPromoRedemption = async ({
     {
       promoId,
       userId,
+      orderId,
       redeemedAt: new Date().toISOString(),
       discountCents,
     }
@@ -312,6 +316,8 @@ const makeOrderNumber = () => {
     const rand = String(Math.floor(Math.floor(Math.random()*1000))).padStart(3, '0'); 
     return `E${rand}${hh}${mm}`;
 }
+
+// place order with order items and optional promo redemption
 export const placeOrder = async ({
   userId,
   items,
@@ -351,10 +357,10 @@ export const placeOrder = async ({
     await createPromoRedemption({
       promoId: promo.promoId,
       userId,
+      orderId: orderDoc.$id,
       discountCents: promo.discountCents,
     });
   }
 
   return orderDoc;
 };
-

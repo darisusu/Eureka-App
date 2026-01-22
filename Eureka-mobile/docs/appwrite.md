@@ -49,13 +49,6 @@
 - userId -> refers to user.$id
 - redeemedAt (datetime)
 - discountCents (int) (optional)
+- orderId (string) -> refers to orders.$id
 
 
-## to check whether redeeemed before:
-existing = query promo_redemptions
-  where promoId = X
-  and userId = Y
-
-if (existing.length > 0) {
-  reject
-}

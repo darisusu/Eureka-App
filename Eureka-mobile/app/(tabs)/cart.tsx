@@ -15,9 +15,9 @@ import CustomHeader from "@/components/CustomHeader";
 import { placeOrder, validatePromoCode } from "@/lib/appwrite";
 import useAuthStore from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
-import type { PaymentInfoStripeProps } from "@/type";
+import type { PaymentInfoSummaryProps, CartFooterProps } from "@/type";
 import cn from "clsx";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -28,8 +28,9 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Asset } from "expo-asset";
 
+
+// Reusable card wrapper for cart sections with consistent padding/border styles.
 const SectionCard = ({
   children,
   className,
@@ -42,13 +43,13 @@ const SectionCard = ({
   </View>
 );
 
-// Payment Summary Row 
+// Renders a single label/value row for the payment summary list.
 const PaymentSummaryRow = ({
   label,
   value,
   labelStyle,
   valueStyle,
-}: PaymentInfoStripeProps) => (
+}: PaymentInfoSummaryProps) => (
   <View className="flex-between flex-row my-1">
     <Text className={cn("paragraph-medium text-gray-200", labelStyle)}>
       {label}
@@ -59,7 +60,7 @@ const PaymentSummaryRow = ({
   </View>
 );
 
-// Promo Code Section
+// Handles promo code input and apply action UI.
 const PromoCodeSection = ({
   promoCode,
   setPromoCode,
@@ -110,7 +111,7 @@ const PromoCodeSection = ({
   );
 };
 
-// Estimated Time card
+// Estimated time display; currently static until back-end queue data is wired.
 // TODO: make dynamic based on kitchen load and order queue
 const EstimatedTimeCard = ({estimatedTime}: {
 estimatedTime: { range: string; note: string };
@@ -126,7 +127,7 @@ estimatedTime: { range: string; note: string };
   </SectionCard>
 );
 
-// Payment Summary Card
+// Groups payment summary rows (items, promo, totals).
 const PaymentSummaryCard = ({
   totalItems,
   subtotalCents,
@@ -161,7 +162,7 @@ const PaymentSummaryCard = ({
   </SectionCard>
 );
 
-// Entire Combined Section below item list
+// Footer bundle below the item list: ETA, promo, totals, and CTA.
 const CartFooter = ({
   totalItems,
   subtotalCents,
@@ -174,19 +175,7 @@ const CartFooter = ({
   setPromoCode,
   promoCodeInput,
   onOrderNow,
-}: {
-  totalItems: number;
-  subtotalCents: number;
-  discountCents: number;
-  promoCode?: string | null;
-  estimatedTime: { range: string; note: string };
-  isSubmitting: boolean;
-  onApplyPromo: () => void;
-  isApplyingPromo: boolean;
-  setPromoCode: (value: string) => void;
-  promoCodeInput: string;
-  onOrderNow: () => void;
-}) => {
+}: CartFooterProps) => {
   if (totalItems === 0) return null;
 
   return (
@@ -214,6 +203,7 @@ const CartFooter = ({
   );
 };
 
+// Main Cart screen: shows items, pricing, and checkout controls.
 const Cart = () => {
   const items = useCartStore((state) => state.items);
 
@@ -229,6 +219,14 @@ const Cart = () => {
     discountCents: number;
   } | null>(null);
 
+  // Update promo code input and reset applied promo when edited after redeeming.
+  const handlePromoCodeChange = (value: string) => {
+    setPromoCode(value);
+    if (appliedPromo) {
+      setAppliedPromo(null);
+    }
+  };
+
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotalCents = items.reduce(
     (sum, item) => sum + Math.round(item.price * 100) * item.quantity,
@@ -236,7 +234,38 @@ const Cart = () => {
   );
   const discountCents = appliedPromo?.discountCents ?? 0;
 
-  // Handle Apply Promo Code process
+  // Revalidate promo discount when cart subtotal changes (keeps percent promos accurate).
+  useEffect(() => {
+    if (!appliedPromo) return;
+    if (!user?.id || subtotalCents <= 0) {
+      setAppliedPromo(null);
+      return;
+    }
+
+    let isActive = true;
+    (async () => {
+      try {
+        const refreshed = await validatePromoCode({
+          code: appliedPromo.codeUpper,
+          userId: user.id,
+          subtotalCents,
+        });
+        if (isActive) {
+          setAppliedPromo(refreshed);
+        }
+      } catch {
+        if (isActive) {
+          setAppliedPromo(null);
+        }
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [appliedPromo, subtotalCents, user?.id]);
+
+  // Validate and apply a promo code for the current user and subtotal.
   const handleApplyPromo = async () => {
     if (!promoCode.trim()) {
       Alert.alert("Promo code", "Please enter a code.");
@@ -249,13 +278,16 @@ const Cart = () => {
 
     setIsApplyingPromo(true);
     try {
-      const result = await validatePromoCode({ // validate promo code
+      // Validate promo code, throws if invalid
+      // returns { promoId, code, discount in cents } that is validated
+      const result = await validatePromoCode({ 
         code: promoCode,
         userId: user.id,
         subtotalCents,
       });
 
-      setPromoCode(result.codeUpper);
+      // Apply the validated promo
+      setPromoCode(result.codeUpper); 
       setAppliedPromo(result);
       Alert.alert("Promo code", `Code applied: ${result.codeUpper}`);
     } catch (error: unknown) {
@@ -274,7 +306,7 @@ const Cart = () => {
     note: "Based on current kitchen load",
   };
 
-  // Handle Order Now process
+  // Place order and optionally re-validate promo before submission.
   const handleOrderNow = async () => {
     const userId = user?.id;
     if (!userId) {
@@ -315,7 +347,7 @@ const Cart = () => {
       });
 
       // TODO: Ensure successful order placement and payment
-      clearCart(); 
+      clearCart();
       Alert.alert("Order placed", `Your order number is ${orderDoc.orderNumber}.`);
 
     } catch (error: unknown) {
@@ -366,7 +398,7 @@ const Cart = () => {
             isSubmitting={isSubmitting}
             onApplyPromo={handleApplyPromo}
             isApplyingPromo={isApplyingPromo}
-            setPromoCode={setPromoCode}
+            setPromoCode={handlePromoCodeChange}
             promoCodeInput={promoCode}
             onOrderNow={handleOrderNow}
           />

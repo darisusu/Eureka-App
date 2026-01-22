@@ -68,12 +68,27 @@ interface TabBarIconProps {
     title: string;
 }
 
-interface PaymentInfoStripeProps {
+interface PaymentInfoSummaryProps {
     label: string;
     value: string;
     labelStyle?: string;
     valueStyle?: string;
 }
+
+interface CartFooterProps {
+  totalItems: number;
+  subtotalCents: number;
+  discountCents: number;
+  promoCode?: string | null;
+  estimatedTime: EstimatedTime;
+  isSubmitting: boolean;
+  onApplyPromo: () => void;
+  isApplyingPromo: boolean;
+  setPromoCode: (value: string) => void;
+  promoCodeInput: string;
+  onOrderNow: () => void;
+};
+
 
 interface CustomButtonProps {
     onPress?: () => void;
