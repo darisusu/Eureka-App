@@ -1,15 +1,35 @@
 # user
-![alt text](image-3.png)
+- name (string)
+- email (string)
+- accountId (string)
+- avatar (url)
 
 # orders
-![alt text](image-1.png)
+- total (double)
+- userId (string) -> refers to user.$id
+- orderNumber(string)
+- status (enum: "received", "preparing", "ready") note: collected is removed
+- isPaid (boolean)
+
 - has its own new unique $id
-- orders.userId -> refers to user.$id
+
 
 # orders_items
-![alt text](image-2.png)
+- name (string)
+- price (double)
+- specialRequest (string, optional)
+- orderId (string) ->refers to orders.$id
+- menuId (string)
+- qty (integer)
+
 - has its own new unique $id
-- orders_items.orderId -> refers to orders.$id
+
+
+maybe need to add promo to orders?????????//
+
+# menu
+
+# categories
 
 # promo_codes
 - codeUpper (string, store uppercase, unique)
