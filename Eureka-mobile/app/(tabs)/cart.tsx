@@ -5,6 +5,10 @@
 // Redirect to home page for order tracking after successful order placement
 
 
+// remove promo code text after redeeming, Applied promo should reset when user edits the code
+
+
+
 import CartItem from "@/components/CartItem";
 import CustomButton from "@/components/CustomButton";
 import CustomHeader from "@/components/CustomHeader";
@@ -55,6 +59,7 @@ const PaymentSummaryRow = ({
   </View>
 );
 
+// Promo Code Section
 const PromoCodeSection = ({
   promoCode,
   setPromoCode,
@@ -106,6 +111,7 @@ const PromoCodeSection = ({
 };
 
 // Estimated Time card
+// TODO: make dynamic based on kitchen load and order queue
 const EstimatedTimeCard = ({estimatedTime}: {
 estimatedTime: { range: string; note: string };
 }) => (
@@ -123,12 +129,12 @@ estimatedTime: { range: string; note: string };
 // Payment Summary Card
 const PaymentSummaryCard = ({
   totalItems,
-  subtotal,
+  subtotalCents,
   discountCents,
   promoCode,
 }: {
   totalItems: number;
-  subtotal: number;
+  subtotalCents: number;
   discountCents: number;
   promoCode?: string | null;
 }) => (
@@ -136,7 +142,7 @@ const PaymentSummaryCard = ({
     <Text className="h3-bold text-dark-100 mb-5">Payment Summary</Text>
     <PaymentSummaryRow
       label={`Total Items (${totalItems})`}
-      value={`$${subtotal.toFixed(2)}`}
+      value={`$${(subtotalCents / 100).toFixed(2)}`}
     />
     {discountCents > 0 ? (
       <PaymentSummaryRow
@@ -148,17 +154,17 @@ const PaymentSummaryCard = ({
     <View className="border-t border-gray-300 my-2" />
     <PaymentSummaryRow
       label={`Total`}
-      value={`$${Math.max(0, subtotal - discountCents / 100).toFixed(2)}`}
+      value={`$${(Math.max(0, subtotalCents - discountCents) / 100).toFixed(2)}`}
       labelStyle="base-bold !text-dark-100"
       valueStyle="base-bold !text-dark-100 !text-right"
     />
   </SectionCard>
 );
 
-// Entire Section below item list
+// Entire Combined Section below item list
 const CartFooter = ({
   totalItems,
-  subtotal,
+  subtotalCents,
   discountCents,
   promoCode,
   estimatedTime,
@@ -170,7 +176,7 @@ const CartFooter = ({
   onOrderNow,
 }: {
   totalItems: number;
-  subtotal: number;
+  subtotalCents: number;
   discountCents: number;
   promoCode?: string | null;
   estimatedTime: { range: string; note: string };
@@ -195,7 +201,7 @@ const CartFooter = ({
       />
       <PaymentSummaryCard
         totalItems={totalItems}
-        subtotal={subtotal}
+        subtotalCents={subtotalCents}
         discountCents={discountCents}
         promoCode={promoCode}
       />
@@ -224,12 +230,13 @@ const Cart = () => {
   } | null>(null);
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = items.reduce(
-    (sum, item) => sum + item.quantity * item.price,
+  const subtotalCents = items.reduce(
+    (sum, item) => sum + Math.round(item.price * 100) * item.quantity,
     0
   );
   const discountCents = appliedPromo?.discountCents ?? 0;
 
+  // Handle Apply Promo Code process
   const handleApplyPromo = async () => {
     if (!promoCode.trim()) {
       Alert.alert("Promo code", "Please enter a code.");
@@ -242,8 +249,7 @@ const Cart = () => {
 
     setIsApplyingPromo(true);
     try {
-      const subtotalCents = Math.round(totalPrice * 100);
-      const result = await validatePromoCode({
+      const result = await validatePromoCode({ // validate promo code
         code: promoCode,
         userId: user.id,
         subtotalCents,
@@ -268,6 +274,7 @@ const Cart = () => {
     note: "Based on current kitchen load",
   };
 
+  // Handle Order Now process
   const handleOrderNow = async () => {
     const userId = user?.id;
     if (!userId) {
@@ -283,8 +290,7 @@ const Cart = () => {
     try {
       let discountToApplyCents = discountCents;
       if (appliedPromo) {
-        const subtotalCents = Math.round(totalPrice * 100);
-        const refreshed = await validatePromoCode({
+        const refreshed = await validatePromoCode({ // re-validate before order placement
           code: appliedPromo.codeUpper,
           userId,
           subtotalCents,
@@ -298,7 +304,7 @@ const Cart = () => {
       const orderDoc = await placeOrder({
         userId,
         items,
-        total: Math.max(0, totalPrice - discountToApplyCents / 100),
+        total: Math.max(0, subtotalCents - discountToApplyCents) / 100,
       });
 
       // TODO: Ensure successful order placement and payment
@@ -346,7 +352,7 @@ const Cart = () => {
         ListFooterComponent={
           <CartFooter
             totalItems={totalItems}
-            subtotal={totalPrice}
+            subtotalCents={subtotalCents}
             discountCents={discountCents}
             promoCode={appliedPromo?.codeUpper}
             estimatedTime={estimatedTime}
