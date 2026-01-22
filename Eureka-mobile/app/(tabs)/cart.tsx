@@ -8,7 +8,7 @@
 import CartItem from "@/components/CartItem";
 import CustomButton from "@/components/CustomButton";
 import CustomHeader from "@/components/CustomHeader";
-import { placeOrder } from "@/lib/appwrite";
+import { placeOrder, validatePromoCode } from "@/lib/appwrite";
 import useAuthStore from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
 import type { PaymentInfoStripeProps } from "@/type";
@@ -24,6 +24,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Asset } from "expo-asset";
 
 const SectionCard = ({
   children,
@@ -54,9 +55,20 @@ const PaymentSummaryRow = ({
   </View>
 );
 
-//TODO: integrate with promo code system in appwritem, ensure only valid codes can be applied
-const PromoCodeSection = () => {
-  const [promoCode, setPromoCode] = useState("");
+const PromoCodeSection = ({
+  promoCode,
+  setPromoCode,
+  onApply,
+  isApplying,
+  appliedCode,
+}: {
+  promoCode: string;
+  setPromoCode: (value: string) => void;
+  onApply: () => void;
+  isApplying: boolean;
+  appliedCode?: string | null;
+}) => {
+  const hasCode = promoCode.trim().length > 0;
 
   return (
     <SectionCard className="bg-white">
@@ -71,24 +83,24 @@ const PromoCodeSection = () => {
           autoCapitalize="none"
         />
         <TouchableOpacity
-          onPress={() => {
-            if (!promoCode.trim()) {
-              Alert.alert("Promo code", "Please enter a code.");
-              return;
-            }
-            const normalizedCode = promoCode.trim().toUpperCase();
-            setPromoCode(normalizedCode);
-            Alert.alert("Promo code", `Code applied: ${normalizedCode}`);
-          }}
+          onPress={onApply}
           className={cn(
             "rounded-full px-6 py-3",
-            promoCode.trim().length > 0 ? "bg-primary" : "bg-gray-300"
+            hasCode ? "bg-primary" : "bg-gray-300"
           )}
           activeOpacity={0.85}
+          disabled={!hasCode || isApplying}
         >
-          <Text className="text-white text-base font-semibold">Redeem</Text>
+          <Text className="text-white text-base font-semibold">
+            {isApplying ? "Checking..." : "Redeem"}
+          </Text>
         </TouchableOpacity>
       </View>
+      {appliedCode ? (
+        <Text className="text-sm text-green-600 mt-3">
+          Applied code: {appliedCode}
+        </Text>
+      ) : null}
     </SectionCard>
   );
 };
@@ -111,21 +123,32 @@ estimatedTime: { range: string; note: string };
 // Payment Summary Card
 const PaymentSummaryCard = ({
   totalItems,
-  totalPrice,
+  subtotal,
+  discountCents,
+  promoCode,
 }: {
   totalItems: number;
-  totalPrice: number;
+  subtotal: number;
+  discountCents: number;
+  promoCode?: string | null;
 }) => (
   <SectionCard>
     <Text className="h3-bold text-dark-100 mb-5">Payment Summary</Text>
     <PaymentSummaryRow
       label={`Total Items (${totalItems})`}
-      value={`$${totalPrice.toFixed(2)}`}
+      value={`$${subtotal.toFixed(2)}`}
     />
+    {discountCents > 0 ? (
+      <PaymentSummaryRow
+        label={`Promo ${promoCode ? `(${promoCode})` : ""}`}
+        value={`-$${(discountCents / 100).toFixed(2)}`}
+        valueStyle="text-green-600"
+      />
+    ) : null}
     <View className="border-t border-gray-300 my-2" />
     <PaymentSummaryRow
       label={`Total`}
-      value={`$${totalPrice.toFixed(2)}`}
+      value={`$${Math.max(0, subtotal - discountCents / 100).toFixed(2)}`}
       labelStyle="base-bold !text-dark-100"
       valueStyle="base-bold !text-dark-100 !text-right"
     />
@@ -135,15 +158,27 @@ const PaymentSummaryCard = ({
 // Entire Section below item list
 const CartFooter = ({
   totalItems,
-  totalPrice,
+  subtotal,
+  discountCents,
+  promoCode,
   estimatedTime,
   isSubmitting,
+  onApplyPromo,
+  isApplyingPromo,
+  setPromoCode,
+  promoCodeInput,
   onOrderNow,
 }: {
   totalItems: number;
-  totalPrice: number;
+  subtotal: number;
+  discountCents: number;
+  promoCode?: string | null;
   estimatedTime: { range: string; note: string };
   isSubmitting: boolean;
+  onApplyPromo: () => void;
+  isApplyingPromo: boolean;
+  setPromoCode: (value: string) => void;
+  promoCodeInput: string;
   onOrderNow: () => void;
 }) => {
   if (totalItems === 0) return null;
@@ -151,8 +186,19 @@ const CartFooter = ({
   return (
     <View className="gap-5">
       <EstimatedTimeCard estimatedTime={estimatedTime} />
-      <PromoCodeSection />
-      <PaymentSummaryCard totalItems={totalItems} totalPrice={totalPrice} />
+      <PromoCodeSection
+        promoCode={promoCodeInput}
+        setPromoCode={setPromoCode}
+        onApply={onApplyPromo}
+        isApplying={isApplyingPromo}
+        appliedCode={promoCode}
+      />
+      <PaymentSummaryCard
+        totalItems={totalItems}
+        subtotal={subtotal}
+        discountCents={discountCents}
+        promoCode={promoCode}
+      />
       <CustomButton
         title="Order Now"
         isLoading={isSubmitting}
@@ -169,12 +215,52 @@ const Cart = () => {
   const { user } = useAuthStore();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<{
+    promoId: string;
+    codeUpper: string;
+    discountCents: number;
+  } | null>(null);
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = items.reduce(
     (sum, item) => sum + item.quantity * item.price,
     0
   );
+  const discountCents = appliedPromo?.discountCents ?? 0;
+
+  const handleApplyPromo = async () => {
+    if (!promoCode.trim()) {
+      Alert.alert("Promo code", "Please enter a code.");
+      return;
+    }
+    if (!user?.id) {
+      Alert.alert("Please sign in", "Sign in to redeem a promo code.");
+      return;
+    }
+
+    setIsApplyingPromo(true);
+    try {
+      const subtotalCents = Math.round(totalPrice * 100);
+      const result = await validatePromoCode({
+        code: promoCode,
+        userId: user.id,
+        subtotalCents,
+      });
+
+      setPromoCode(result.codeUpper);
+      setAppliedPromo(result);
+      Alert.alert("Promo code", `Code applied: ${result.codeUpper}`);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to validate promo code.";
+      Alert.alert("Promo code", message);
+      setAppliedPromo(null);
+    } finally {
+      setIsApplyingPromo(false);
+    }
+  };
 
   // Mock estimated time data
   const estimatedTime = {
@@ -195,7 +281,25 @@ const Cart = () => {
     //TODO: ensure prepayment success before order creation
     setIsSubmitting(true);
     try {
-      const orderDoc = await placeOrder({ userId, items, total: totalPrice });
+      let discountToApplyCents = discountCents;
+      if (appliedPromo) {
+        const subtotalCents = Math.round(totalPrice * 100);
+        const refreshed = await validatePromoCode({
+          code: appliedPromo.codeUpper,
+          userId,
+          subtotalCents,
+        });
+        discountToApplyCents = refreshed.discountCents;
+        if (refreshed.discountCents !== appliedPromo.discountCents) {
+          setAppliedPromo(refreshed);
+        }
+      }
+
+      const orderDoc = await placeOrder({
+        userId,
+        items,
+        total: Math.max(0, totalPrice - discountToApplyCents / 100),
+      });
 
       // TODO: Ensure successful order placement and payment
       clearCart(); 
@@ -242,9 +346,15 @@ const Cart = () => {
         ListFooterComponent={
           <CartFooter
             totalItems={totalItems}
-            totalPrice={totalPrice}
+            subtotal={totalPrice}
+            discountCents={discountCents}
+            promoCode={appliedPromo?.codeUpper}
             estimatedTime={estimatedTime}
             isSubmitting={isSubmitting}
+            onApplyPromo={handleApplyPromo}
+            isApplyingPromo={isApplyingPromo}
+            setPromoCode={setPromoCode}
+            promoCodeInput={promoCode}
             onOrderNow={handleOrderNow}
           />
         }

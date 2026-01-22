@@ -12,7 +12,6 @@
 - orders_items.orderId -> refers to orders.$id
 
 # promo_codes
-
 - codeUpper (string, store uppercase, unique)
 - isActive (boolean)
 - type (enum: "PERCENT" or "FIXED")
@@ -29,3 +28,13 @@
 - userId -> refers to user.$id
 - redeemedAt (datetime)
 - discountCents (int) (optional)
+
+
+## to check whether redeeemed before:
+existing = query promo_redemptions
+  where promoId = X
+  and userId = Y
+
+if (existing.length > 0) {
+  reject
+}

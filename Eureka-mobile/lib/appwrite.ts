@@ -2,6 +2,21 @@ import type { CartItemType, CreateUserParams, GetMenuParams, Order, OrderItem, S
 import { Account, Avatars, Client, Databases, ID, Query, Storage } from "react-native-appwrite";
 import type { User } from "@/type";
 
+
+// Defining PromoCode type
+type PromoType = "PERCENT" | "FIXED";
+type PromoCode = {
+    $id: string;
+    codeUpper: string;
+    isActive: boolean;
+    type: PromoType;
+    value: number;
+    maxDiscountCents?: number;
+    minSubtotalCents?: number;
+    usageLimitPerUser: number;
+};
+
+// Appwrite configuration
 export const appwriteConfig = {
     endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT, // url of backend server
     platform: "com.SGBoleh.eureka", // application identifier
@@ -12,7 +27,9 @@ export const appwriteConfig = {
     categoriesCollectionId: 'categories', 
     menuCollectionId: 'menu',
     ordersCollectionId: 'orders',
-    ordersItemsCollectionId: 'orders_items', 
+    ordersItemsCollectionId: 'orders_items',
+    promoRedemptionsCollectionId: 'promo_redemptions',
+    promoCodesCollectionId: 'promo_codes',
 }
 
 export const client = new Client(); // create empty client (bridge between app and appwrite server)
@@ -31,7 +48,7 @@ const avatars = new Avatars(client);
 //defining functions that interact with appwrite services
 export const createUser = async ({email,password,name}: CreateUserParams) => { // parameter type: CreateUserParams, destructured so can use each field directly
     try {
-        //create new account on appwrite
+        //create account on appwrite auth (not shown within database)
         const newAccount = await account.create(
             ID.unique(), // generates unique id
             email,
@@ -47,6 +64,7 @@ export const createUser = async ({email,password,name}: CreateUserParams) => { /
 
         const avatarUrl = avatars.getInitialsURL(name); //generate avatar image using initials and store into database
 
+        // create new user in user collection
         return await databases.createDocument(
             appwriteConfig.databaseId, //databaseId
             appwriteConfig.userCollectionId, //collectionId
@@ -145,6 +163,107 @@ export const getCategories = async () => {
     }
 }
 
+// get PromoCode Object by codeUpper
+const getPromoCodeByCodeUpper = async (codeUpper: string): Promise<PromoCode> => {
+    const promos = await databases.listDocuments(
+        appwriteConfig.databaseId,
+        appwriteConfig.promoCodesCollectionId,
+        [Query.equal("codeUpper", codeUpper)]
+    );
+
+    if (!promos || promos.total === 0) {
+        throw new Error("Promo code not found.");
+    }
+
+    return promos.documents[0] as unknown as PromoCode;
+};
+
+// check whether user has redeemed promo code before
+const hasUserRedeemedPromo = async (promoId: string, userId: string): Promise<boolean> => {
+    const redemptions = await databases.listDocuments(
+        appwriteConfig.databaseId,
+        appwriteConfig.promoRedemptionsCollectionId,
+        [
+          Query.equal("promoId", promoId), 
+          Query.equal("userId", userId),
+          Query.limit(1) // only need one matching document to scan for, prevents loading extra
+        ]
+    );
+    return redemptions.total > 0; // if any redemption found, return true
+};
+
+// calculate discount amount in cents based on promo code and subtotal
+const calculatePromoDiscount = (promo: PromoCode, subtotalCents: number) => {
+    let discountCents = 0;
+
+    if (promo.type === "PERCENT") {
+        discountCents = Math.round((subtotalCents * promo.value) / 100); // round to nearest cent
+    } else {
+        discountCents = promo.value;
+    }
+
+    // if max discount is defined, cap discount to max allowed
+    if (promo.maxDiscountCents !== undefined && promo.maxDiscountCents !== null) {
+        discountCents = Math.min(discountCents, promo.maxDiscountCents);
+    }
+
+    return Math.min(discountCents, subtotalCents);
+};
+
+// Main function to process PromoCode
+// validate promo code and return discount details
+// receives parameter object with {code, userId, subtotalCents}
+// Right now validatePromoCode() runs client-side, and later the client could still place an order without actually creating a redemption record (or could fake values)
+export const validatePromoCode = async ({
+    code,
+    userId,
+    subtotalCents,
+}: {
+    code: string;
+    userId: string;
+    subtotalCents: number;
+}) => {
+
+    const codeUpper = code.trim().toUpperCase();
+    if (!codeUpper) {
+        throw new Error("Promo code is required.");
+    }
+    if (subtotalCents <= 0) {
+        throw new Error("Subtotal must be greater than zero.");
+    }
+
+    const promo = await getPromoCodeByCodeUpper(codeUpper);
+
+    if (!promo.isActive) {
+        throw new Error("Promo code is inactive.");
+    }
+
+    // if minimum subtotal is defined, check if subtotal meets requirement
+    if (promo.minSubtotalCents != null && subtotalCents < promo.minSubtotalCents) {
+        const minDollars = (promo.minSubtotalCents / 100).toFixed(2);
+        throw new Error(`Minimum subtotal is $${minDollars}.`);
+    }
+
+    const usageLimit = promo.usageLimitPerUser ?? 0;
+    if (usageLimit > 0) {
+        const existing = await hasUserRedeemedPromo(promo.$id, userId);
+        if (existing === true) {
+            throw new Error("Promo code already used.");
+        }
+    }
+
+    const discountCents = calculatePromoDiscount(promo, subtotalCents);
+    if (discountCents <= 0) {
+        throw new Error("Promo code does not apply.");
+    }
+
+    return {
+        promoId: promo.$id,
+        codeUpper,
+        discountCents,
+    };
+};
+
 export const createOrder = async (order: Order) => {
   return databases.createDocument(
     appwriteConfig.databaseId,
@@ -195,6 +314,5 @@ export const placeOrder = async ({ userId, items, total }: { userId: string; ite
 
   return orderDoc;
 };
-
 
 

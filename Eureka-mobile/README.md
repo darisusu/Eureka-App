@@ -76,7 +76,7 @@ Required collections:
 - `menu` (fields: name, description, image_url, price, categories, prep_time_min)
 - `orders` (userId, status, isPaid, total, orderNumber)
 - `order_items` (orderId, menuId, name, price, qty, specialRequest)
-
+### To be updated
 
 ## Running the App
 
