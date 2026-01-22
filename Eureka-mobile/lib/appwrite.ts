@@ -273,6 +273,28 @@ export const createOrder = async (order: Order) => {
   );
 };
 
+export const createPromoRedemption = async ({
+  promoId,
+  userId,
+  discountCents,
+}: {
+  promoId: string;
+  userId: string;
+  discountCents?: number;
+}) => {
+  return databases.createDocument(
+    appwriteConfig.databaseId,
+    appwriteConfig.promoRedemptionsCollectionId,
+    ID.unique(),
+    {
+      promoId,
+      userId,
+      redeemedAt: new Date().toISOString(),
+      discountCents,
+    }
+  );
+};
+
 export const createOrderItem = async (item: OrderItem) => {
   return databases.createDocument(
     appwriteConfig.databaseId,
@@ -290,13 +312,26 @@ const makeOrderNumber = () => {
     const rand = String(Math.floor(Math.floor(Math.random()*1000))).padStart(3, '0'); 
     return `E${rand}${hh}${mm}`;
 }
-export const placeOrder = async ({ userId, items, total }: { userId: string; items: CartItemType[]; total: number }) => {
+export const placeOrder = async ({
+  userId,
+  items,
+  total,
+  promo,
+}: {
+  userId: string;
+  items: CartItemType[];
+  total: number;
+  promo?: { promoId: string; promoCode: string; discountCents: number };
+}) => {
     const orderDoc = await createOrder({
         userId,
         orderNumber: makeOrderNumber(),
         status: "received",
         isPaid: false,
-        total
+        total,
+        promoId: promo?.promoId,
+        promoCode: promo?.promoCode,
+        discountCents: promo?.discountCents,
     });
     
   await Promise.all( // runs parallel, waits for all order items to be created
@@ -312,7 +347,14 @@ export const placeOrder = async ({ userId, items, total }: { userId: string; ite
     )
   );
 
+  if (promo) {
+    await createPromoRedemption({
+      promoId: promo.promoId,
+      userId,
+      discountCents: promo.discountCents,
+    });
+  }
+
   return orderDoc;
 };
-
 

@@ -28,6 +28,9 @@ export interface Order {
     isPaid: boolean;
     total: number;
     orderNumber: string;
+    promoId?: string;
+    promoCode?: string;
+    discountCents?: number;
 }
 
 export interface OrderItem {

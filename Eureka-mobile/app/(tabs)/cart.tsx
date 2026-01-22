@@ -305,6 +305,13 @@ const Cart = () => {
         userId,
         items,
         total: Math.max(0, subtotalCents - discountToApplyCents) / 100,
+        promo: appliedPromo
+          ? {
+              promoId: appliedPromo.promoId,
+              promoCode: appliedPromo.codeUpper,
+              discountCents: discountToApplyCents,
+            }
+          : undefined,
       });
 
       // TODO: Ensure successful order placement and payment

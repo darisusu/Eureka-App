@@ -10,6 +10,9 @@
 - orderNumber(string)
 - status (enum: "received", "preparing", "ready") note: collected is removed
 - isPaid (boolean)
+- promoId (string, optional) -> refers to promo_codes.$id
+- promoCode (string, optional) -> promo code used (uppercase)
+- discountCents (int, optional)
 
 - has its own new unique $id
 
@@ -24,8 +27,6 @@
 
 - has its own new unique $id
 
-
-maybe need to add promo to orders?????????//
 
 # menu
 
