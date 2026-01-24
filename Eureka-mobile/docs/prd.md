@@ -6,7 +6,7 @@
 ## 1. Overview
 
 **Eureka** is a lightweight online preorder and payment system designed for grab-and-go food operations.  
-It enables food stalls to manage **prepaid online orders** with **minimal operational overhead**, focusing on speed, predictability, and queue efficiency.
+It enables food stalls to manage **online orders** with **minimal operational overhead**, focusing on speed, predictability, and queue efficiency.
 
 The MVP is initially piloted with **Eureka Store**, but the system is designed to be **merchant-agnostic** and generalisable to other food stalls under a consistent operational and pricing framework.
 
@@ -15,7 +15,7 @@ The MVP is initially piloted with **Eureka Store**, but the system is designed t
 ## 2. Goals & Non-Goals
 
 ### Goals
-- Enable customers to preorder and prepay food for fast pickup
+- Enable customers to preorder food for fast pickup
 - Provide accurate preparation time estimates
 - Reduce queueing and no-show risk
 - Minimise store-side operational complexity
@@ -74,14 +74,14 @@ The MVP is initially piloted with **Eureka Store**, but the system is designed t
 - Select items
 - Confirm order
 - Generate unique order number
-- Proceed to online payment
+- (Planned) Proceed to online payment
 
 ---
 
 ### 5.4 Online Payment
-- Online payment required before order is accepted
-- Payment confirmation is mandatory before order enters kitchen queue
-- Failed or unpaid orders are not processed
+- (Planned) Online payment required before order is accepted
+- (Planned) Payment confirmation is mandatory before order enters kitchen queue
+- (Planned) Failed or unpaid orders are not processed
 
 ---
 
@@ -92,7 +92,7 @@ The MVP is initially piloted with **Eureka Store**, but the system is designed t
 - System calculates realistic estimated ready time based on:
   - Current active online orders
   - Queue load
-- Estimated time is shown before and after checkout
+- Estimated time is shown before and after checkout (currently static placeholder)
 
 ---
 
@@ -131,6 +131,13 @@ Status updates are reflected in real time.
 - **Enabled only for department meeting / bulk orders**
 - Not available for standard individual orders
 - Allows advance scheduling with capacity checks
+
+---
+
+## 5.11 Promotions & Pricing (Current Implementation)
+- Promo codes can be applied at checkout
+- Pricing calculations (subtotal, discount, total) run on the Appwrite Function
+- Orders are saved with promo metadata and discount cents
 
 ---
 
@@ -195,3 +202,36 @@ Staff can update order states:
 
 ---
 
+## 9. Current Implementation Snapshot (as of today)
+
+### Implemented
+- Appwrite authentication (sign up / sign in / sign out)
+- Menu browse + search + category filtering
+- Cart with quantity adjustments and special requests
+- Promo code validation and server-side pricing via Appwrite Function
+- Order + order items created in Appwrite with promo metadata
+
+### Partially Implemented
+- Estimated time card is displayed, but currently static
+- Profile screen shows mock order history (not yet wired to Appwrite orders)
+
+### Not Yet Implemented
+- Stripe/online payment flow (orders are not paid)
+- Live order status tracking and updates
+- Staff/admin dashboard and role-based access
+- Notifications and scheduled pickup
+
+---
+
+## 10. Workflow (Current)
+
+1) User signs up or signs in (Appwrite auth).
+2) User browses menu and adds items to cart.
+3) Cart totals are calculated by the Appwrite Function using menu prices.
+4) Optional promo code is validated on the server; discount applied if valid.
+5) User places order; app saves order + order items in Appwrite.
+6) Cart clears and order number is shown to the user.
+
+Notes:
+- Payment is not yet enforced.
+- ETA is currently static text.
