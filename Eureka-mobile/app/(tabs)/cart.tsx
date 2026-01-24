@@ -12,7 +12,7 @@
 import CartItem from "@/components/CartItem";
 import CustomButton from "@/components/CustomButton";
 import CustomHeader from "@/components/CustomHeader";
-import { placeOrder, validatePromoCode } from "@/lib/appwrite";
+import { calculateCartTotals, placeOrder } from "@/lib/appwrite";
 import useAuthStore from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
 import type { PaymentInfoSummaryProps, CartFooterProps } from "@/type";
@@ -219,55 +219,94 @@ const Cart = () => {
     discountCents: number;
   } | null>(null);
 
+  // Pricing state: subtotal, discount, total in cents.
+  const [pricing, setPricing] = useState({
+    subtotalCents: 0,
+    discountCents: 0,
+    totalCents: 0,
+  });
+
+
+  // Updates pricing state: subtotal, discount, total based on current cart & promo.
+  // Calls backend to validate promo and compute totals. (calculateCartTotals)
+  const refreshTotals = async (options?: {
+    promoCode?: string | null;
+    showError?: boolean;
+  }) => {
+    const promoOverride = options?.promoCode;
+
+    // Empty cart: reset pricing and promo.
+    if (items.length === 0) {
+      setPricing({ subtotalCents: 0, discountCents: 0, totalCents: 0 });
+      setAppliedPromo(null);
+      return null;
+    }
+
+    try {
+      // Call backend to calculate total 
+      const result = await calculateCartTotals({
+        userId: user?.id,
+        items,
+        promoCode:
+          promoOverride !== undefined ? promoOverride : appliedPromo?.codeUpper,
+      });
+      // Update pricing state
+      setPricing({
+        subtotalCents: result.subtotalCents,
+        discountCents: result.discountCents,
+        totalCents: result.totalCents,
+      });
+      setAppliedPromo(result.promo); // Update server promo: {promoId, codeUpper, discountCents}
+      if (result.promo?.codeUpper) {
+        setPromoCode(result.promo.codeUpper); // Update user input to what was accepted (e.g casing, trimming)
+      }
+      return result;
+
+    // On error, reset promo and pricing; optionally re-throw error.
+    } catch (error: unknown) {
+      setAppliedPromo(null);
+      setPricing((prev) => ({
+        subtotalCents: prev.subtotalCents,
+        discountCents: 0,
+        totalCents: prev.subtotalCents,
+      }));
+
+      if (options?.showError) {
+        throw error;
+      }
+      return null;
+    }
+  };
+
   // Update promo code input and reset applied promo when edited after redeeming.
   const handlePromoCodeChange = (value: string) => {
     setPromoCode(value);
     if (appliedPromo) {
       setAppliedPromo(null);
+      void refreshTotals({ promoCode: null });
     }
   };
+  
+
+  // Get subtotal and discount from backend-calculated pricing state
+  // Initialized to 0, updated via refreshTotals calls
+  const subtotalCents = pricing.subtotalCents;
+  const discountCents = pricing.discountCents;
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotalCents = items.reduce(
-    (sum, item) => sum + Math.round(item.price * 100) * item.quantity,
-    0
-  );
-  const discountCents = appliedPromo?.discountCents ?? 0;
 
-  // useEffect autoupdates when values it watches change i.e [appliedPromo, subtotalCents, user?.id]
-  // Auto updates promo discount amt when cart subtotal changes.
+
+  // Recompute totals whenever cart items or user changes (i.e dependencies)
   useEffect(() => {
-    if (!appliedPromo) return;
-    if (!user?.id || subtotalCents <= 0) {
-      setAppliedPromo(null);
-      return;
-    }
-
-    let isActive = true;
-    (async () => {
-      try {
-        const refreshed = await validatePromoCode({
-          code: appliedPromo.codeUpper,
-          userId: user.id,
-          subtotalCents,
-        });
-        if (isActive) {
-          setAppliedPromo(refreshed);
-        }
-      } catch {
-        if (isActive) {
-          setAppliedPromo(null);
-        }
-      }
-    })();
-
-    return () => {
-      isActive = false;
-    };
-  }, [appliedPromo, subtotalCents, user?.id]);
+    void refreshTotals();
+  }, [items, user?.id]);
 
   // Validate and apply a promo code for the current user and subtotal.
   const handleApplyPromo = async () => {
+    if (totalItems === 0) {
+      Alert.alert("Promo code", "Add items to your cart first.");
+      return;
+    }
     if (!promoCode.trim()) {
       Alert.alert("Promo code", "Please enter a code.");
       return;
@@ -279,18 +318,12 @@ const Cart = () => {
 
     setIsApplyingPromo(true);
     try {
-      // Validate promo code, throws if invalid
-      // returns { promoId, code, discount in cents } that is validated
-      const result = await validatePromoCode({ 
-        code: promoCode,
-        userId: user.id,
-        subtotalCents,
-      });
-
-      // Apply the validated promo
-      setPromoCode(result.codeUpper); 
-      setAppliedPromo(result);
-      Alert.alert("Promo code", `Code applied: ${result.codeUpper}`);
+      const result = await refreshTotals({ promoCode, showError: true });
+      if (result?.promo?.codeUpper) {
+        Alert.alert("Promo code", `Code applied: ${result.promo.codeUpper}`);
+      } else {
+        Alert.alert("Promo code", "Code applied.");
+      }
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Failed to validate promo code.";
@@ -308,6 +341,7 @@ const Cart = () => {
   };
 
   // Place order and optionally re-validate promo before submission.
+  // Refresh totals again to ensure pricing is up-to-date.
   const handleOrderNow = async () => {
     const userId = user?.id;
     if (!userId) {
@@ -321,28 +355,27 @@ const Cart = () => {
     //TODO: ensure prepayment success before order creation
     setIsSubmitting(true);
     try {
-      let discountToApplyCents = discountCents;
-      if (appliedPromo) {
-        const refreshed = await validatePromoCode({ // re-validate before order placement
-          code: appliedPromo.codeUpper,
-          userId,
-          subtotalCents,
-        });
-        discountToApplyCents = refreshed.discountCents;
-        if (refreshed.discountCents !== appliedPromo.discountCents) {
-          setAppliedPromo(refreshed);
-        }
-      }
+      const refreshedCart = await calculateCartTotals({
+        userId,
+        items,
+        promoCode: appliedPromo?.codeUpper,
+      });
+      setPricing({
+        subtotalCents: refreshedCart.subtotalCents,
+        discountCents: refreshedCart.discountCents,
+        totalCents: refreshedCart.totalCents,
+      });
+      setAppliedPromo(refreshedCart.promo);
 
       const orderDoc = await placeOrder({
         userId,
         items,
-        total: Math.max(0, subtotalCents - discountToApplyCents) / 100,
-        promo: appliedPromo
+        total: refreshedCart.totalCents / 100,
+        promo: refreshedCart.promo
           ? {
-              promoId: appliedPromo.promoId,
-              promoCode: appliedPromo.codeUpper,
-              discountCents: discountToApplyCents,
+              promoId: refreshedCart.promo.promoId,
+              promoCode: refreshedCart.promo.codeUpper,
+              discountCents: refreshedCart.promo.discountCents,
             }
           : undefined,
       });

@@ -1,5 +1,5 @@
 import type { CartItemType, CreateUserParams, GetMenuParams, Order, OrderItem, SignInParams } from "@/type";
-import { Account, Avatars, Client, Databases, ID, Query, Storage } from "react-native-appwrite";
+import { Account, Avatars, Client, Databases, Functions, ID, Query, Storage } from "react-native-appwrite";
 import type { User } from "@/type";
 
 
@@ -30,6 +30,8 @@ export const appwriteConfig = {
     ordersItemsCollectionId: 'orders_items',
     promoRedemptionsCollectionId: 'promo_redemptions',
     promoCodesCollectionId: 'promo_codes',
+    calculateOrderFunctionId: '69726d850020c86b24f0',
+    
 }
 
 export const client = new Client(); // create empty client (bridge between app and appwrite server)
@@ -43,6 +45,7 @@ client
 export const account = new Account(client);
 export const databases = new Databases(client);
 export const storage = new Storage(client);
+export const functions = new Functions(client);
 const avatars = new Avatars(client);
 
 //defining functions that interact with appwrite services
@@ -162,6 +165,62 @@ export const getCategories = async () => {
         throw new Error(e as string);
     }
 }
+
+type CartTotalsResponse = {
+  subtotalCents: number;
+  discountCents: number;
+  totalCents: number;
+  promo: { promoId: string; codeUpper: string; discountCents: number } | null;
+};
+
+export const calculateCartTotals = async ({
+  userId,
+  items,
+  promoCode,
+}: {
+  userId?: string;
+  items: CartItemType[];
+  promoCode?: string | null;
+}): Promise<CartTotalsResponse> => {
+  if (!appwriteConfig.calculateOrderFunctionId) {
+    throw new Error("Appwrite function id is not configured.");
+  }
+
+  const payload = JSON.stringify({
+    userId,
+    promoCode,
+    items: items.map((item) => ({
+      menuId: item.id,
+      quantity: item.quantity,
+    })),
+  });
+
+  const execution = await functions.createExecution(
+    appwriteConfig.calculateOrderFunctionId,
+    payload,
+    false
+  );
+
+  const raw = execution.responseBody ?? "";
+  let response: { ok?: boolean; message?: string; data?: CartTotalsResponse } | null = null;
+  if (raw) {
+    try {
+      response = JSON.parse(raw) as {
+        ok?: boolean;
+        message?: string;
+        data?: CartTotalsResponse;
+      };
+    } catch {
+      throw new Error("Invalid response from pricing function.");
+    }
+  }
+
+  if (!response || response.ok === false || !response.data) {
+    throw new Error(response?.message ?? "Failed to calculate cart totals.");
+  }
+
+  return response.data;
+};
 
 // get PromoCode Object by codeUpper
 const getPromoCodeByCodeUpper = async (codeUpper: string): Promise<PromoCode> => {

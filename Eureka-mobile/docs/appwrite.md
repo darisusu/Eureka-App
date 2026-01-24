@@ -12,7 +12,7 @@
 - isPaid (boolean)
 - promoId (string, optional) -> refers to promo_codes.$id
 - promoCode (string, optional) -> promo code used (uppercase)
-- discountCents (int, optional)
+- discountCents (integer) (int, optional)
 
 - has its own new unique $id
 
@@ -51,4 +51,14 @@
 - discountCents (int) (optional)
 - orderId (string) -> refers to orders.$id
 
+# functions
+## calculate-cart
+Environment variables:
+- APPWRITE_ENDPOINT
+- APPWRITE_PROJECT_ID
+- APPWRITE_API_KEY
+- APPWRITE_DATABASE_ID
+- APPWRITE_MENU_COLLECTION_ID
+- APPWRITE_PROMO_CODES_COLLECTION_ID
+- APPWRITE_PROMO_REDEMPTIONS_COLLECTION_ID
 
