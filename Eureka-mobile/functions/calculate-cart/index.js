@@ -1,3 +1,6 @@
+// Server side function, calculates cart totals, validates promo code
+// Node.js environment with Appwrite SDK
+
 const { Client, Databases, Query } = require("node-appwrite");
 
 const requireEnv = (key) => {
@@ -26,17 +29,20 @@ const chunk = (list, size) => {
   return chunks;
 };
 
+// Main function handler
 module.exports = async ({ req, res, log, error }) => {
   try {
-    const payload = parsePayload(req);
+    const payload = parsePayload(req); // convert json to JS object
     if (payload === null) {
       return res.json({ ok: false, message: "Invalid JSON payload." }, 400);
     }
 
+    // Extract payload fields
     const items = Array.isArray(payload.items) ? payload.items : [];
     const promoCodeRaw = typeof payload.promoCode === "string" ? payload.promoCode : "";
     const userId = typeof payload.userId === "string" ? payload.userId : "";
 
+    // Early return for empty cart
     if (items.length === 0) {
       return res.json({
         ok: true,
@@ -49,6 +55,8 @@ module.exports = async ({ req, res, log, error }) => {
       });
     }
 
+
+    // Access Appwrite environment variables
     const databaseId = requireEnv("APPWRITE_DATABASE_ID");
     const menuCollectionId = requireEnv("APPWRITE_MENU_COLLECTION_ID");
     const promoCodesCollectionId = requireEnv("APPWRITE_PROMO_CODES_COLLECTION_ID");
@@ -61,6 +69,7 @@ module.exports = async ({ req, res, log, error }) => {
 
     const databases = new Databases(client);
 
+    // Get unique menu IDs from cart items
     const menuIds = [
       ...new Set(
         items
@@ -82,6 +91,7 @@ module.exports = async ({ req, res, log, error }) => {
       menuDocs.push(...response.documents);
     }
 
+    // Map pricing by menu ID for easy lookup
     const priceById = new Map(
       menuDocs.map((doc) => [doc.$id, Number(doc.price ?? 0)])
     );
@@ -103,6 +113,7 @@ module.exports = async ({ req, res, log, error }) => {
     let promo = null;
     let discountCents = 0;
 
+    // Validate and apply promo code if provided
     const promoCode = promoCodeRaw.trim().toUpperCase();
     if (promoCode) {
       if (!userId) {
@@ -138,6 +149,7 @@ module.exports = async ({ req, res, log, error }) => {
         );
       }
 
+      // Check usage limit per user for the promo code
       const usageLimit = promoDoc.usageLimitPerUser ?? 0;
       if (usageLimit > 0) {
         const redemptions = await databases.listDocuments(
@@ -164,7 +176,10 @@ module.exports = async ({ req, res, log, error }) => {
         discountCents = Math.min(discountCents, promoDoc.maxDiscountCents);
       }
 
+      // Ensure discount does not exceed subtotal
       discountCents = Math.min(discountCents, subtotalCents);
+
+      // Rejects promo codes that do not provide any discount
       if (discountCents <= 0) {
         return res.json({ ok: false, message: "Promo code does not apply." }, 400);
       }
@@ -178,6 +193,7 @@ module.exports = async ({ req, res, log, error }) => {
 
     const totalCents = Math.max(0, subtotalCents - discountCents);
 
+    // return successs response
     return res.json({
       ok: true,
       data: {

@@ -1,20 +1,18 @@
-import type { CartItemType, CreateUserParams, GetMenuParams, Order, OrderItem, SignInParams } from "@/type";
+import type {
+    CartItemType,
+    CartTotalsResponse,
+    CheckoutConfirmResponse,
+    CheckoutResponse,
+    CreateUserParams,
+    GetMenuParams,
+    Order,
+    OrderItem,
+    PromoCode,
+    SignInParams,
+    User,
+} from "@/type";
 import { Account, Avatars, Client, Databases, Functions, ID, Query, Storage } from "react-native-appwrite";
-import type { User } from "@/type";
 
-
-// Defining PromoCode type
-type PromoType = "PERCENT" | "FIXED";
-type PromoCode = {
-    $id: string;
-    codeUpper: string;
-    isActive: boolean;
-    type: PromoType;
-    value: number;
-    maxDiscountCents?: number;
-    minSubtotalCents?: number;
-    usageLimitPerUser: number;
-};
 
 // Appwrite configuration
 export const appwriteConfig = {
@@ -31,6 +29,7 @@ export const appwriteConfig = {
     promoRedemptionsCollectionId: 'promo_redemptions',
     promoCodesCollectionId: 'promo_codes',
     calculateOrderFunctionId: '69726d850020c86b24f0',
+    createCheckoutFunctionId: '69772ec2001744fcee32'
     
 }
 
@@ -59,7 +58,6 @@ export const createUser = async ({email,password,name}: CreateUserParams) => { /
             name
         );
 
-        //if no new account
         if (!newAccount) {
             throw new Error('Failed to create account');
         }
@@ -128,7 +126,6 @@ export const getCurrentUser = async (): Promise<User | null> => {
     }
 
 }
-
 export const getMenu = async ({category, query}: GetMenuParams) => {
     try {
         const queries: string[] = [];
@@ -165,13 +162,6 @@ export const getCategories = async () => {
         throw new Error(e as string);
     }
 }
-
-type CartTotalsResponse = {
-  subtotalCents: number;
-  discountCents: number;
-  totalCents: number;
-  promo: { promoId: string; codeUpper: string; discountCents: number } | null;
-};
 
 export const calculateCartTotals = async ({
   userId,
@@ -217,6 +207,113 @@ export const calculateCartTotals = async ({
 
   if (!response || response.ok === false || !response.data) {
     throw new Error(response?.message ?? "Failed to calculate cart totals.");
+  }
+
+  return response.data;
+};
+
+// Creates an order in a pending state and returns Stripe PaymentIntent details.
+export const createCheckout = async ({
+  userId,
+  items,
+  promoCode,
+  customerEmail,
+}: {
+  userId: string;
+  items: CartItemType[];
+  promoCode?: string | null;
+  customerEmail?: string;
+}): Promise<CheckoutResponse> => {
+  if (!appwriteConfig.createCheckoutFunctionId) {
+    throw new Error("Checkout function id is not configured.");
+  }
+
+  const payload = JSON.stringify({
+    action: "create",
+    userId,
+    promoCode,
+    customerEmail,
+    items: items.map((item) => ({
+      menuId: item.id,
+      quantity: item.quantity,
+      specialRequest: item.specialRequest,
+    })),
+  });
+
+  const execution = await functions.createExecution(
+    appwriteConfig.createCheckoutFunctionId,
+    payload,
+    false
+  );
+
+  const raw = execution.responseBody ?? "";
+  let response:
+    | { ok?: boolean; message?: string; data?: CheckoutResponse }
+    | null = null;
+  if (raw) {
+    try {
+      response = JSON.parse(raw) as {
+        ok?: boolean;
+        message?: string;
+        data?: CheckoutResponse;
+      };
+    } catch {
+      throw new Error("Invalid response from checkout function.");
+    }
+  }
+
+  if (!response || response.ok === false || !response.data) {
+    throw new Error(response?.message ?? "Failed to create checkout.");
+  }
+
+  return response.data;
+};
+
+// Confirms payment status on the server and updates the order to paid.
+export const confirmCheckoutPayment = async ({
+  userId,
+  orderId,
+  paymentIntentId,
+}: {
+  userId: string;
+  orderId: string;
+  paymentIntentId: string;
+}): Promise<CheckoutConfirmResponse> => {
+  if (!appwriteConfig.createCheckoutFunctionId) {
+    throw new Error("Checkout function id is not configured.");
+  }
+
+  const payload = JSON.stringify({
+    action: "confirm",
+    userId,
+    orderId,
+    paymentIntentId,
+  });
+
+  const execution = await functions.createExecution(
+    appwriteConfig.createCheckoutFunctionId,
+    payload,
+    false
+  );
+
+  const raw = execution.responseBody ?? "";
+  let response:
+    | { ok?: boolean; message?: string; data?: CheckoutConfirmResponse }
+    | null = null;
+  if (raw) {
+    try {
+      response = JSON.parse(raw) as {
+        ok?: boolean;
+        message?: string;
+        data?: CheckoutConfirmResponse;
+      };
+    } catch {
+      throw new Error("Invalid response from checkout confirmation.");
+    }
+  }
+
+  if (!response || response.ok === false || !response.data) {
+    throw new Error(response?.message ?? "Failed to confirm payment.");
   }
 
   return response.data;

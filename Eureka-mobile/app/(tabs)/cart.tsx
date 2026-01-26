@@ -5,17 +5,15 @@
 // Redirect to home page for order tracking after successful order placement
 
 
-// remove promo code text after redeeming, Applied promo should reset when user edits the code
-
-
 
 import CartItem from "@/components/CartItem";
 import CustomButton from "@/components/CustomButton";
 import CustomHeader from "@/components/CustomHeader";
-import { calculateCartTotals, placeOrder } from "@/lib/appwrite";
+import { calculateCartTotals, confirmCheckoutPayment, createCheckout } from "@/lib/appwrite";
 import useAuthStore from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
 import type { PaymentInfoSummaryProps, CartFooterProps } from "@/type";
+import { useStripe } from "@stripe/stripe-react-native";
 import cn from "clsx";
 import React, { useEffect, useState } from "react";
 import {
@@ -209,6 +207,7 @@ const Cart = () => {
 
   const { clearCart } = useCartStore();
   const { user } = useAuthStore();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
@@ -340,8 +339,7 @@ const Cart = () => {
     note: "Based on current kitchen load",
   };
 
-  // Place order and optionally re-validate promo before submission.
-  // Refresh totals again to ensure pricing is up-to-date.
+  // Create checkout, present Stripe payment sheet, and confirm payment on the server.
   const handleOrderNow = async () => {
     const userId = user?.id;
     if (!userId) {
@@ -352,41 +350,70 @@ const Cart = () => {
       Alert.alert("Empty cart", "Add items before placing an order.");
       return;
     }
-    //TODO: ensure prepayment success before order creation
     setIsSubmitting(true);
     try {
-      const refreshedCart = await calculateCartTotals({
+      const checkout = await createCheckout({
         userId,
         items,
         promoCode: appliedPromo?.codeUpper,
+        customerEmail: user?.email,
       });
       setPricing({
-        subtotalCents: refreshedCart.subtotalCents,
-        discountCents: refreshedCart.discountCents,
-        totalCents: refreshedCart.totalCents,
+        subtotalCents: checkout.subtotalCents,
+        discountCents: checkout.discountCents,
+        totalCents: checkout.totalCents,
       });
-      setAppliedPromo(refreshedCart.promo);
+      setAppliedPromo(checkout.promo);
 
-      const orderDoc = await placeOrder({
+      if (!checkout.paymentRequired) {
+        clearCart();
+        Alert.alert("Order placed", `Your order number is ${checkout.orderNumber}.`);
+        return;
+      }
+
+      if (!checkout.clientSecret || !checkout.paymentIntentId) {
+        throw new Error("Missing payment intent details.");
+      }
+
+      // Prepare the Stripe PaymentSheet using the server-generated client secret.
+      const initResult = await initPaymentSheet({
+        merchantDisplayName: "Eureka",
+        paymentIntentClientSecret: checkout.clientSecret,
+      });
+
+      if (initResult.error) {
+        throw new Error(initResult.error.message);
+      }
+
+      const presentResult = await presentPaymentSheet();
+      if (presentResult.error) {
+        if (presentResult.error.code === "Canceled") {
+          Alert.alert("Payment canceled", "You can retry checkout any time.");
+          return;
+        }
+        throw new Error(presentResult.error.message);
+      }
+
+      // Confirm payment on the server to update order status to paid.
+      const confirmation = await confirmCheckoutPayment({
         userId,
-        items,
-        total: refreshedCart.totalCents / 100,
-        promo: refreshedCart.promo
-          ? {
-              promoId: refreshedCart.promo.promoId,
-              promoCode: refreshedCart.promo.codeUpper,
-              discountCents: refreshedCart.promo.discountCents,
-            }
-          : undefined,
+        orderId: checkout.orderId,
+        paymentIntentId: checkout.paymentIntentId,
       });
 
-      // TODO: Ensure successful order placement and payment
+      if (!confirmation.isPaid) {
+        throw new Error("Payment verification failed.");
+      }
+
       clearCart();
-      Alert.alert("Order placed", `Your order number is ${orderDoc.orderNumber}.`);
+      Alert.alert(
+        "Payment successful",
+        `Your order number is ${checkout.orderNumber}.`
+      );
 
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : "Failed to place order.";
+        error instanceof Error ? error.message : "Failed to complete checkout.";
         Alert.alert("Error", message);
     } finally {
       setIsSubmitting(false);

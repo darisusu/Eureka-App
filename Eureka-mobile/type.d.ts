@@ -25,13 +25,14 @@ export type User = {
 
 export interface Order {
     userId: string;
-    status: "received" | "preparing" | "ready" | "collected";
+    status: "pending_payment" | "paid" | "received" | "preparing" | "ready" | "collected";
     isPaid: boolean;
     total: number;
     orderNumber: string;
     promoId?: string;
     promoCode?: string;
     discountCents?: number;
+    paymentIntentId?: string;
 }
 
 export interface OrderItem {
@@ -62,6 +63,40 @@ export interface CartStore {
     getTotalItems: () => number;
     getTotalPrice: () => number;
 }
+
+export type PromoType = "PERCENT" | "FIXED";
+
+export interface PromoCode {
+    $id: string;
+    codeUpper: string;
+    isActive: boolean;
+    type: PromoType;
+    value: number;
+    maxDiscountCents?: number;
+    minSubtotalCents?: number;
+    usageLimitPerUser: number;
+}
+
+export type CartTotalsResponse = {
+    subtotalCents: number;
+    discountCents: number;
+    totalCents: number;
+    promo: { promoId: string; codeUpper: string; discountCents: number } | null;
+};
+
+export type CheckoutResponse = CartTotalsResponse & {
+    orderId: string;
+    orderNumber: string;
+    paymentRequired: boolean;
+    paymentIntentId: string | null;
+    clientSecret: string | null;
+};
+
+export type CheckoutConfirmResponse = {
+    orderId: string;
+    status: string;
+    isPaid: boolean;
+};
 
 export interface TabBarIconProps {
     focused: boolean;

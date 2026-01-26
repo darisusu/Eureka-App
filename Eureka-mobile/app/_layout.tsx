@@ -1,5 +1,6 @@
 import useAuthStore from "@/store/auth.store";
 import * as Sentry from "@sentry/react-native";
+import { StripeProvider } from "@stripe/stripe-react-native";
 import { useFonts } from "expo-font";
 import { SplashScreen, Stack } from "expo-router";
 import { useEffect } from "react";
@@ -51,5 +52,15 @@ export default Sentry.wrap(function RootLayout() {
     return null;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  if (!process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+    throw new Error("Missing EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY.");
+  }
+
+  return (
+    <StripeProvider
+      publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY}
+    >
+      <Stack screenOptions={{ headerShown: false }} />
+    </StripeProvider>
+  );
 });
