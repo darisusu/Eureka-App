@@ -23,9 +23,29 @@ export type User = {
     avatar: string;
 }
 
+export type OrderStatus =
+    | "pending_payment"
+    | "paid"
+    | "received"
+    | "preparing"
+    | "ready"
+    | "collected";
+
 export interface Order {
     userId: string;
-    status: "pending_payment" | "paid" | "received" | "preparing" | "ready" | "collected";
+    status: OrderStatus;
+    isPaid: boolean;
+    total: number;
+    orderNumber: string;
+    promoId?: string;
+    promoCode?: string;
+    discountCents?: number;
+    paymentIntentId?: string;
+}
+
+export interface OrderDocument extends Models.Document {
+    userId: string;
+    status: OrderStatus;
     isPaid: boolean;
     total: number;
     orderNumber: string;
@@ -43,6 +63,24 @@ export interface OrderItem {
     qty: number;
     specialRequest?: string;
 }
+
+export interface OrderItemDocument extends Models.Document {
+    orderId: string;
+    menuId: string;
+    name: string;
+    price: number;
+    qty: number;
+    specialRequest?: string;
+}
+
+export type OrderHistoryEntry = {
+    orderId: string;
+    orderNumber: string;
+    dateLabel: string;
+    total: number;
+    status: OrderStatus;
+    itemsSummary: string;
+};
 
 export interface CartItemType {
     id: string; // menu item id
@@ -94,7 +132,7 @@ export type CheckoutResponse = CartTotalsResponse & {
 
 export type CheckoutConfirmResponse = {
     orderId: string;
-    status: string;
+    status: OrderStatus;
     isPaid: boolean;
 };
 

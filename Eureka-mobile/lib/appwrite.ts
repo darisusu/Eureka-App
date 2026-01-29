@@ -5,6 +5,9 @@ import type {
     CheckoutResponse,
     CreateUserParams,
     GetMenuParams,
+    OrderDocument,
+    OrderHistoryEntry,
+    OrderItemDocument,
     PromoCode,
     SignInParams,
     User,
@@ -315,6 +318,70 @@ export const confirmCheckoutPayment = async ({
   }
 
   return response.data;
+};
+
+export const getRecentOrders = async ({
+  userId,
+  limit = 4,
+}: {
+  userId: string;
+  limit?: number;
+}): Promise<OrderHistoryEntry[]> => {
+  if (!userId) return [];
+
+  const ordersResponse = await databases.listDocuments(
+    appwriteConfig.databaseId,
+    appwriteConfig.ordersCollectionId,
+    [
+      Query.equal("userId", userId),
+      Query.equal("isPaid", true),
+      Query.orderDesc("$createdAt"),
+      Query.limit(limit),
+    ]
+  );
+
+  const orders = ordersResponse.documents as unknown as OrderDocument[];
+  if (orders.length === 0) {
+    return [];
+  }
+
+  const orderIds = orders.map((order) => order.$id);
+  const itemsResponse = await databases.listDocuments(
+    appwriteConfig.databaseId,
+    appwriteConfig.ordersItemsCollectionId,
+    [Query.equal("orderId", orderIds), Query.limit(100)]
+  );
+  const items = itemsResponse.documents as unknown as OrderItemDocument[];
+
+  const itemsByOrderId = new Map<string, OrderItemDocument[]>();
+  for (const item of items) {
+    const existing = itemsByOrderId.get(item.orderId) ?? [];
+    existing.push(item);
+    itemsByOrderId.set(item.orderId, existing);
+  }
+
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-SG", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+
+  return orders.map((order) => {
+    const orderItems = itemsByOrderId.get(order.$id) ?? [];
+    const itemsSummary = orderItems.length
+      ? orderItems.map((item) => `${item.qty}x ${item.name}`).join(", ")
+      : "Items unavailable";
+
+    return {
+      orderId: order.$id,
+      orderNumber: order.orderNumber || order.$id,
+      dateLabel: formatDate(order.$createdAt),
+      total: Number(order.total ?? 0),
+      status: order.status,
+      itemsSummary,
+    };
+  });
 };
 
 // get PromoCode Object by codeUpper

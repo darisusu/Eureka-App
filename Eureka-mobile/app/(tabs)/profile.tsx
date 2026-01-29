@@ -1,36 +1,54 @@
 import { images } from "@/constants";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Alert, Image, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CustomButton from "@/components/CustomButton";
-import { signOut } from "@/lib/appwrite";
+import { getRecentOrders, signOut } from "@/lib/appwrite";
 import useAuthStore from "@/store/auth.store";
 import { router } from "expo-router";
+import type { OrderHistoryEntry, OrderStatus } from "@/type";
 
 //TODO:
 // Link with real user data from backend/store
 // Add sign out functionality
 
-const pastOrders = [
-  {
-    id: "E2847",
-    date: "Jan 12, 2025",
-    total: 18.5,
-    status: "Collected",
-    items: "2x Sliced Fish Soup, 1x Teh C",
-  },
-  {
-    id: "E2719",
-    date: "Jan 08, 2025",
-    total: 9.0,
-    status: "Ready",
-    items: "1x Fish Soup",
-  },
-];
+const statusLabels: Record<OrderStatus, string> = {
+  pending_payment: "Pending payment",
+  paid: "Paid",
+  received: "Received",
+  preparing: "Preparing",
+  ready: "Ready",
+  collected: "Collected",
+};
 
 const Profile = () => {
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [pastOrders, setPastOrders] = useState<OrderHistoryEntry[]>([]);
+  const [isOrdersLoading, setIsOrdersLoading] = useState(false);
   const { user, isLoading, setIsAuthenticated, setUser } = useAuthStore();
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      if (!user?.id) {
+        setPastOrders([]);
+        return;
+      }
+
+      setIsOrdersLoading(true);
+      try {
+        const orders = await getRecentOrders({ userId: user.id, limit: 4 });
+        setPastOrders(orders);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to load past orders.";
+        Alert.alert("Orders", message);
+      } finally {
+        setIsOrdersLoading(false);
+      }
+    };
+
+    void loadOrders();
+  }, [user?.id]);
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -70,33 +88,37 @@ const Profile = () => {
         <View className="mt-8">
           <Text className="h3-bold text-dark-100">Past Orders</Text>
           <View className="mt-4 gap-4">
-            {pastOrders.length === 0 ? (
+            {isOrdersLoading ? (
+              <Text className="paragraph-medium text-gray-200">
+                Loading past orders...
+              </Text>
+            ) : pastOrders.length === 0 ? (
               <Text className="paragraph-medium text-gray-200">
                 No past orders yet.
               </Text>
             ) : (
               pastOrders.map((order) => (
                 <View
-                  key={order.id}
+                  key={order.orderId}
                   className="border border-gray-200 rounded-2xl p-4 bg-white"
                 >
                   <View className="flex-row justify-between items-center">
                     <Text className="paragraph-bold text-dark-100">
-                      {order.id}
+                      {order.orderNumber}
                     </Text>
                     <Text className="paragraph-regular text-gray-200">
-                      {order.date}
+                      {order.dateLabel}
                     </Text>
                   </View>
                   <Text className="paragraph-regular text-gray-200 mt-2">
-                    {order.items}
+                    {order.itemsSummary}
                   </Text>
                   <View className="flex-row justify-between items-center mt-3">
                     <Text className="paragraph-bold text-dark-100">
                       ${order.total.toFixed(2)}
                     </Text>
                     <Text className="paragraph-bold text-primary">
-                      {order.status}
+                      {statusLabels[order.status] ?? order.status}
                     </Text>
                   </View>
                 </View>
