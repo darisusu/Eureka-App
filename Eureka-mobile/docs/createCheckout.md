@@ -78,7 +78,7 @@ Notes:
 - Recomputes pricing from `menu` collection (client prices are ignored).
 - Validates promo codes using the same rules as `calculate-cart`.
 - Creates `orders` and `orders_items` in Appwrite.
-- Creates a Stripe PaymentIntent with `automatic_payment_methods` and `receipt_email`.
+- Creates a Stripe PaymentIntent with automatic_payment_methods and receipt_email.
 - Sets order fields:
   - Create: `status: "pending_payment"`, `isPaid: false`, `paymentIntentId` stored
   - Free order: `status: "paid"`, `isPaid: true`
@@ -106,6 +106,7 @@ Optional:
 ## Configuration (client)
 - `appwriteConfig.createCheckoutFunctionId` in `lib/appwrite.ts` controls which function is called.
 - `StripeProvider` is initialized in `app/_layout.tsx` using `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY`.
+- `initPaymentSheet` enables Apple Pay + Google Pay with `merchantCountryCode: "SG"` in `app/(tabs)/cart.tsx`.
 - If you redeploy the function, update the function ID in `lib/appwrite.ts`.
 
 ## Known constraints

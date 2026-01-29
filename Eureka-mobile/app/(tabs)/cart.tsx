@@ -15,6 +15,7 @@ import { useCartStore } from "@/store/cart.store";
 import type { PaymentInfoSummaryProps, CartFooterProps } from "@/type";
 import { useStripe } from "@stripe/stripe-react-native";
 import cn from "clsx";
+import * as Linking from "expo-linking";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -379,6 +380,7 @@ const Cart = () => {
       const initResult = await initPaymentSheet({
         merchantDisplayName: "Eureka",
         paymentIntentClientSecret: checkout.clientSecret,
+        returnURL: Linking.createURL("stripe-redirect"),
       });
 
       if (initResult.error) {
