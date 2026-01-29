@@ -1,0 +1,9 @@
+{
+  "name": "hello",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "commonjs",
+"dependencies": {
+    "node-appwrite": "^14.0.0"
+  }
+}

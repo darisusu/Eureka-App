@@ -39,6 +39,12 @@ const normalizeRequest = (value) => {
   return trimmed ? trimmed : undefined;
 };
 
+const logStep = (log, message, meta) => {
+  if (typeof log !== "function") return;
+  const suffix = meta ? ` ${JSON.stringify(meta)}` : "";
+  log(`[create-checkout] ${message}${suffix}`);
+};
+
 const makeOrderNumber = () => {
   const d = new Date();
   const pad2 = (n) => n.toString().padStart(2, "0");
@@ -52,6 +58,7 @@ const toCents = (price) => Math.round(Number(price ?? 0) * 100);
 
 // Main function handler
 module.exports = async ({ req, res, log, error }) => {
+  const startedAt = Date.now();
   try {
     const payload = parsePayload(req);
     if (payload === null) {
@@ -59,9 +66,10 @@ module.exports = async ({ req, res, log, error }) => {
     }
 
     // if payload.action exists use it (else default to "create")
-    const action = typeof payload.action === "string" 
-      ? payload.action 
+    const action = typeof payload.action === "string"
+      ? payload.action
       : "create";
+    logStep(log, "request_received", { action });
 
     const client = new Client()
       .setEndpoint(requireEnv("APPWRITE_ENDPOINT"))
@@ -93,6 +101,11 @@ module.exports = async ({ req, res, log, error }) => {
         ? payload.userId 
         : "";
 
+      logStep(log, "confirm_start", {
+        orderId,
+        paymentIntentId: paymentIntentId.slice(-6),
+      });
+
       if (!orderId || !paymentIntentId) {
         return res.json(
           { ok: false, message: "orderId and paymentIntentId are required." },
@@ -121,13 +134,18 @@ module.exports = async ({ req, res, log, error }) => {
       }
 
       if (orderDoc.isPaid) {
+        logStep(log, "confirm_already_paid", { orderId });
         return res.json({
           ok: true,
           data: { orderId: orderDoc.$id, status: orderDoc.status, isPaid: true },
         });
       }
 
+      logStep(log, "stripe_retrieve_start", {
+        paymentIntentId: paymentIntentId.slice(-6),
+      });
       const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      logStep(log, "stripe_retrieve_done", { status: paymentIntent.status });
       if (paymentIntent.status !== "succeeded") {
         return res.json(
           {
@@ -142,8 +160,10 @@ module.exports = async ({ req, res, log, error }) => {
         isPaid: true,
         status: "paid",
       });
+      logStep(log, "order_marked_paid", { orderId });
 
       if (orderDoc.promoId) {
+        logStep(log, "promo_redemption_check", { orderId });
         const existingRedemption = await databases.listDocuments(
           databaseId,
           promoRedemptionsCollectionId,
@@ -162,9 +182,14 @@ module.exports = async ({ req, res, log, error }) => {
               discountCents: orderDoc.discountCents,
             }
           );
+          logStep(log, "promo_redemption_created", { orderId });
         }
       }
 
+      logStep(log, "confirm_done", {
+        orderId,
+        elapsedMs: Date.now() - startedAt,
+      });
       return res.json({
         ok: true,
         data: { orderId, status: "paid", isPaid: true },
@@ -177,6 +202,13 @@ module.exports = async ({ req, res, log, error }) => {
     const userId = typeof payload.userId === "string" ? payload.userId : "";
     const customerEmail =
       typeof payload.customerEmail === "string" ? payload.customerEmail : "";
+
+    logStep(log, "create_start", {
+      userId,
+      itemsCount: items.length,
+      hasPromo: Boolean(promoCodeRaw),
+      hasEmail: Boolean(customerEmail),
+    });
 
     if (!userId) {
       return res.json({ ok: false, message: "userId is required." }, 400);
@@ -201,6 +233,7 @@ module.exports = async ({ req, res, log, error }) => {
 
     // Load authoritative menu prices to prevent client-side tampering.
     const menuDocs = [];
+    logStep(log, "menu_fetch_start", { menuIdsCount: menuIds.length });
     for (const idChunk of chunk(menuIds, 100)) {
       const response = await databases.listDocuments(databaseId, menuCollectionId, [
         Query.equal("$id", idChunk),
@@ -208,6 +241,7 @@ module.exports = async ({ req, res, log, error }) => {
       ]);
       menuDocs.push(...response.documents); 
     }
+    logStep(log, "menu_fetch_done", { menuDocsCount: menuDocs.length });
 
     // format: [id: { price, name }]
     // Faster lookup
@@ -238,11 +272,13 @@ module.exports = async ({ req, res, log, error }) => {
 
     const promoCode = promoCodeRaw.trim().toUpperCase();
     if (promoCode) {
+      logStep(log, "promo_lookup_start", { promoCode });
       const promos = await databases.listDocuments(
         databaseId,
         promoCodesCollectionId,
         [Query.equal("codeUpper", promoCode), Query.limit(1)]
       );
+      logStep(log, "promo_lookup_done", { found: promos.total });
 
       if (!promos || promos.total === 0) {
         return res.json({ ok: false, message: "Promo code not found." }, 400);
@@ -300,14 +336,25 @@ module.exports = async ({ req, res, log, error }) => {
         codeUpper: promoCode,
         discountCents,
       };
+      logStep(log, "promo_applied", {
+        promoId: promo.promoId,
+        discountCents,
+      });
     }
 
     const totalCents = Math.max(0, subtotalCents - discountCents);
     const orderId = ID.unique();
     const orderNumber = makeOrderNumber();
+    logStep(log, "pricing_done", {
+      subtotalCents,
+      discountCents,
+      totalCents,
+      orderId,
+    });
 
     // If total is free, skip Stripe and immediately mark paid.
     if (totalCents === 0) {
+      logStep(log, "free_order_start", { orderId });
       const orderDoc = await databases.createDocument(
         databaseId,
         ordersCollectionId,
@@ -353,6 +400,10 @@ module.exports = async ({ req, res, log, error }) => {
           )
         )
       );
+      logStep(log, "order_items_created", {
+        orderId: orderDoc.$id,
+        count: orderItemsPayload.length,
+      });
 
       if (promo) {
         await databases.createDocument(
@@ -367,8 +418,13 @@ module.exports = async ({ req, res, log, error }) => {
             discountCents: promo.discountCents,
           }
         );
+        logStep(log, "promo_redemption_created", { orderId: orderDoc.$id });
       }
 
+      logStep(log, "free_order_done", {
+        orderId: orderDoc.$id,
+        elapsedMs: Date.now() - startedAt,
+      });
       return res.json({
         ok: true,
         data: {
@@ -385,6 +441,10 @@ module.exports = async ({ req, res, log, error }) => {
       });
     }
 
+    logStep(log, "stripe_create_start", {
+      amount: totalCents,
+      currency: process.env.STRIPE_CURRENCY || "sgd",
+    });
     // Create the PaymentIntent for the final amount to charge.
     const paymentIntent = await stripe.paymentIntents.create({
       amount: totalCents,
@@ -397,9 +457,14 @@ module.exports = async ({ req, res, log, error }) => {
         promoCode: promo?.codeUpper || "",
       },
     });
+    logStep(log, "stripe_create_done", {
+      paymentIntentId: paymentIntent.id,
+      status: paymentIntent.status,
+    });
 
     let orderDoc;
     try {
+      logStep(log, "order_create_start", { orderId });
       orderDoc = await databases.createDocument(
         databaseId,
         ordersCollectionId,
@@ -446,15 +511,25 @@ module.exports = async ({ req, res, log, error }) => {
           )
         )
       );
+      logStep(log, "order_items_created", {
+        orderId,
+        count: orderItemsPayload.length,
+      });
     } catch (err) {
+      logStep(log, "order_create_failed", { orderId });
       try {
         await stripe.paymentIntents.cancel(paymentIntent.id);
+        logStep(log, "stripe_cancel_done", { paymentIntentId: paymentIntent.id });
       } catch (cancelErr) {
         log(`Failed to cancel payment intent: ${cancelErr}`);
       }
       throw err;
     }
 
+    logStep(log, "create_done", {
+      orderId: orderDoc.$id,
+      elapsedMs: Date.now() - startedAt,
+    });
     return res.json({
       ok: true,
       data: {
@@ -470,6 +545,10 @@ module.exports = async ({ req, res, log, error }) => {
       },
     });
   } catch (err) {
+    logStep(log, "error", {
+      message: err instanceof Error ? err.message : String(err),
+      elapsedMs: Date.now() - startedAt,
+    });
     error(err);
     return res.json({ ok: false, message: "Server error." }, 500);
   }
