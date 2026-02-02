@@ -3,6 +3,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFonts, PlayfairDisplay_900Black } from "@expo-google-fonts/playfair-display";
 import { Feather } from "@expo/vector-icons"; // Icon for the timer
 import { router } from "expo-router";
+import useOrdersStore from "@/store/orders.store";
 
 //TODO:
 // Link up with real order data from backend/store
@@ -19,10 +20,10 @@ const TEXT_SIZE_PCT = 0.60;
 const HEADER_HEIGHT = SCREEN_HEIGHT * HEADER_HEIGHT_PCT;
 const FONT_SIZE = Math.min(HEADER_HEIGHT * TEXT_SIZE_PCT, SCREEN_WIDTH * 0.65);
 
-// --- MOCK DATA FROM IMAGE ---
-const orderDetails = {
+// --- DEFAULT/FALLBACK DATA ---
+const fallbackOrderDetails = {
   id: "#2847",
-  status: "preparing",
+  status: "ready",
   time: "15 min",
   items: [
     { qty: 2, name: "Sliced Fish Soup (Clear)" },
@@ -30,17 +31,40 @@ const orderDetails = {
   ],
 };
 
-const preparationSteps = ["received", "preparing", "ready", "collected"];
+const parseItemsSummary = (summary: string) =>
+  summary
+    .split(", ")
+    .map((entry) => {
+      const match = entry.match(/^(\d+)x\s+(.*)$/);
+      if (match) {
+        return { qty: Number(match[1]), name: match[2] };
+      }
+      return { qty: 1, name: entry };
+    })
+    .filter((entry) => entry.name.trim().length > 0);
+
+const preparationSteps = ["received", "preparing", "ready"];
 const statusTextMap: Record<typeof preparationSteps[number], string> = {
   received: "Your Order Was Received",
   preparing: "Your Order Is Being Prepared",
   ready: "Your Order Is Ready",
-  collected: "Order Collected",
 };
-const currentStatus = orderDetails.status;
 
 export default function Index() {
   const [fontsLoaded] = useFonts({ PlayfairDisplay_900Black });
+  const latestOrder = useOrdersStore((state) => state.recentOrders[0]);
+
+  const orderDetails = latestOrder
+    ? {
+        id: latestOrder.orderNumber.startsWith("#")
+          ? latestOrder.orderNumber
+          : `#${latestOrder.orderNumber}`,
+        status: fallbackOrderDetails.status,
+        time: fallbackOrderDetails.time,
+        items: parseItemsSummary(latestOrder.itemsSummary),
+      }
+    : fallbackOrderDetails;
+  const currentStatus = orderDetails.status;
 
   if (!fontsLoaded) return null;
 
@@ -143,13 +167,18 @@ export default function Index() {
                 {/* The Bar */}
                 <View className="h-2.5 bg-gray-200 rounded-full w-full overflow-hidden flex-row">
                    {/* Calculates width based on status:
-                      received = 25%, preparing = 50%, ready = 75%, collected = 100% 
+                      received = 33%, preparing = 66%, ready = 100%
                    */}
-                  <View 
-                    className="h-full bg-orange-500 rounded-full" 
-                    style={{ 
-                      width: `${((preparationSteps.indexOf(currentStatus) + 1) / preparationSteps.length) * 100}%`,
-                    }} 
+                  <View
+                    className="h-full bg-orange-500 rounded-full"
+                    style={{
+                      width: `${Math.max(
+                        0,
+                        ((preparationSteps.indexOf(currentStatus) + 1) /
+                          preparationSteps.length) *
+                          100
+                      )}%`,
+                    }}
                   />
                 </View>
               </View>
