@@ -102,16 +102,28 @@ export const getCurrentUser = async (): Promise<User | null> => {
         if (!currentAccount) {
             throw new Error;
         }
-        const currentUser = await databases.listDocuments( // user document (app specific details)
-            appwriteConfig.databaseId,
-            appwriteConfig.userCollectionId,
-            [ Query.equal('accountId', currentAccount.$id)] //query: return documents where accountid matches current account id
-        )
-        if (!currentUser || currentUser.total === 0) {
-            throw new Error('User not found');
+        let doc;
+        try {
+            doc = await databases.getDocument( // user document (app specific details)
+                appwriteConfig.databaseId,
+                appwriteConfig.userCollectionId,
+                currentAccount.$id
+            );
+        } catch {
+            const avatarUrl = avatars.getInitialsURL(currentAccount.name);
+            doc = await databases.createDocument(
+                appwriteConfig.databaseId,
+                appwriteConfig.userCollectionId,
+                currentAccount.$id,
+                {
+                    email: currentAccount.email,
+                    name: currentAccount.name,
+                    accountId: currentAccount.$id,
+                    avatar: avatarUrl,
+                }
+            );
         }
 
-        const doc = currentUser.documents[0]; 
         const user: User = {
             id: doc.$id,
             accountId: doc.accountId,
