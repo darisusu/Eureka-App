@@ -8,10 +8,6 @@ import useAuthStore from "@/store/auth.store";
 import { router } from "expo-router";
 import type { OrderHistoryEntry, OrderStatus } from "@/type";
 
-//TODO:
-// Link with real user data from backend/store
-// Add sign out functionality
-
 const statusLabels: Record<OrderStatus, string> = {
   pending_payment: "Pending payment",
   paid: "Paid",
@@ -21,6 +17,7 @@ const statusLabels: Record<OrderStatus, string> = {
   collected: "Collected",
 };
 
+// Number of recent orders to fetch and display on profile page
 const RECENT_ORDERS_LIMIT = 3;
 
 const Profile = () => {

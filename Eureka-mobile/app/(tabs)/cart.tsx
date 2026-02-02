@@ -12,10 +12,12 @@ import CustomHeader from "@/components/CustomHeader";
 import { calculateCartTotals, confirmCheckoutPayment, createCheckout } from "@/lib/appwrite";
 import useAuthStore from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
+import useOrdersStore from "@/store/orders.store";
 import type { PaymentInfoSummaryProps, CartFooterProps } from "@/type";
 import { useStripe } from "@stripe/stripe-react-native";
 import cn from "clsx";
 import * as Linking from "expo-linking";
+import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -208,6 +210,7 @@ const Cart = () => {
 
   const { clearCart } = useCartStore();
   const { user } = useAuthStore();
+  const addRecentOrder = useOrdersStore((state) => state.addRecentOrder);
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -349,6 +352,32 @@ const Cart = () => {
     note: "Based on current kitchen load",
   };
 
+  const formatDateLabel = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-SG", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+
+  const buildOrderEntry = ({
+    orderId,
+    orderNumber,
+    totalCents,
+  }: {
+    orderId: string;
+    orderNumber: string;
+    totalCents: number;
+  }) => ({
+    orderId,
+    orderNumber,
+    dateLabel: formatDateLabel(new Date().toISOString()),
+    total: totalCents / 100,
+    status: "paid" as const,
+    itemsSummary: items.length
+      ? items.map((item) => `${item.quantity}x ${item.name}`).join(", ")
+      : "Items unavailable",
+  });
+
   // Create checkout, present Stripe payment sheet, and confirm payment on the server.
   const handleOrderNow = async () => {
     const userId = user?.id;
@@ -377,8 +406,16 @@ const Cart = () => {
       setHasServerTotals(true);
 
       if (!checkout.paymentRequired) {
+        const newOrder = buildOrderEntry({
+          orderId: checkout.orderId,
+          orderNumber: checkout.orderNumber,
+          totalCents: checkout.totalCents,
+        });
         clearCart();
-        Alert.alert("Order placed", `Your order number is ${checkout.orderNumber}.`);
+        addRecentOrder(newOrder);
+        Alert.alert("Order placed", `Your order number is ${checkout.orderNumber}.`, [
+          { text: "OK", onPress: () => router.replace("/") },
+        ]);
         return;
       }
 
@@ -417,11 +454,16 @@ const Cart = () => {
         throw new Error("Payment verification failed.");
       }
 
+      const newOrder = buildOrderEntry({
+        orderId: checkout.orderId,
+        orderNumber: checkout.orderNumber,
+        totalCents: checkout.totalCents,
+      });
       clearCart();
-      Alert.alert(
-        "Payment successful",
-        `Your order number is ${checkout.orderNumber}.`
-      );
+      addRecentOrder(newOrder);
+      Alert.alert("Payment successful", `Your order number is ${checkout.orderNumber}.`, [
+        { text: "OK", onPress: () => router.replace("/") },
+      ]);
 
     } catch (error: unknown) {
       const message =

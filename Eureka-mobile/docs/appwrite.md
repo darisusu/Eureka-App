@@ -4,6 +4,7 @@
 - email (string)
 - accountId (string)
 - avatar (url)
+- document id: use Appwrite account.$id for a 1:1 mapping (profile doc fetched by id)
 
 ## orders
 - total (double)
