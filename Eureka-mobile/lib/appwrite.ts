@@ -19,18 +19,18 @@ import { Account, AppwriteException, Avatars, Client, Databases, Functions, ID, 
 export const appwriteConfig = {
     endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT, // url of backend server
     platform: "com.SGBoleh.eureka", // application identifier
-    projectId: process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID, // project id
-    databaseId: '6946654c00135532b1a5', // database id
-    bucketId: '6950f39d0013f71e7771', // storage bucket id
-    userCollectionId: 'user',
-    categoriesCollectionId: 'categories', 
-    menuCollectionId: 'menu',
-    ordersCollectionId: 'orders',
-    ordersItemsCollectionId: 'orders_items',
-    promoRedemptionsCollectionId: 'promo_redemptions',
-    promoCodesCollectionId: 'promo_codes',
-    calculateOrderFunctionId: '69726d850020c86b24f0',
-    createCheckoutFunctionId: '69772ec2001744fcee32'
+    projectId: process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID!, // project id
+    databaseId: process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!, // database id
+    bucketId: process.env.EXPO_PUBLIC_APPWRITE_BUCKET_ID!, // storage bucket id
+    userCollectionId: process.env.EXPO_PUBLIC_APPWRITE_USER_COLLECTION_ID!,
+    categoriesCollectionId: process.env.EXPO_PUBLIC_APPWRITE_CATEGORIES_COLLECTION_ID!, 
+    menuCollectionId: process.env.EXPO_PUBLIC_APPWRITE_MENU_COLLECTION_ID!,
+    ordersCollectionId: process.env.EXPO_PUBLIC_APPWRITE_ORDERS_COLLECTION_ID!,
+    ordersItemsCollectionId: process.env.EXPO_PUBLIC_APPWRITE_ORDER_ITEMS_COLLECTION_ID!,
+    promoRedemptionsCollectionId: process.env.EXPO_PUBLIC_APPWRITE_PROMO_REDEMPTIONS_COLLECTION_ID!,
+    promoCodesCollectionId: process.env.EXPO_PUBLIC_APPWRITE_PROMO_CODES_COLLECTION_ID!,
+    calculateOrderFunctionId: process.env.EXPO_PUBLIC_APPWRITE_CALCULATE_ORDER_FUNCTION_ID!,
+    createCheckoutFunctionId: process.env.EXPO_PUBLIC_APPWRITE_CREATE_CHECKOUT_FUNCTION_ID!
     
 }
 
