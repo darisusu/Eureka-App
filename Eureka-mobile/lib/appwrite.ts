@@ -12,7 +12,7 @@ import type {
     SignInParams,
     User,
 } from "@/type";
-import { Account, Avatars, Client, Databases, Functions, ID, Query, Storage } from "react-native-appwrite";
+import { Account, AppwriteException, Avatars, Client, Databases, Functions, ID, Query, Storage } from "react-native-appwrite";
 
 
 // Appwrite configuration
@@ -109,7 +109,12 @@ export const getCurrentUser = async (): Promise<User | null> => {
                 appwriteConfig.userCollectionId,
                 currentAccount.$id
             );
-        } catch {
+        } catch (error) {
+            const isNotFound =
+                error instanceof AppwriteException ? error.code === 404 : false;
+            if (!isNotFound) {
+                throw error;
+            }
             const avatarUrl = avatars.getInitialsURL(currentAccount.name);
             doc = await databases.createDocument(
                 appwriteConfig.databaseId,
