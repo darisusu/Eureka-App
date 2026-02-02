@@ -322,7 +322,7 @@ export const confirmCheckoutPayment = async ({
 
 export const getRecentOrders = async ({
   userId,
-  limit = 4,
+  limit = 5,
 }: {
   userId: string;
   limit?: number;

@@ -21,6 +21,8 @@ const statusLabels: Record<OrderStatus, string> = {
   collected: "Collected",
 };
 
+const RECENT_ORDERS_LIMIT = 3;
+
 const Profile = () => {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [pastOrders, setPastOrders] = useState<OrderHistoryEntry[]>([]);
@@ -36,7 +38,10 @@ const Profile = () => {
 
       setIsOrdersLoading(true);
       try {
-        const orders = await getRecentOrders({ userId: user.id, limit: 4 });
+        const orders = await getRecentOrders({
+          userId: user.id,
+          limit: RECENT_ORDERS_LIMIT,
+        });
         setPastOrders(orders);
       } catch (err) {
         const message =
@@ -86,15 +91,15 @@ const Profile = () => {
         </View>
 
         <View className="mt-8">
-          <Text className="h3-bold text-dark-100">Past Orders</Text>
+          <Text className="h3-bold text-dark-100">Recent Orders</Text>
           <View className="mt-4 gap-4">
             {isOrdersLoading ? (
               <Text className="paragraph-medium text-gray-200">
-                Loading past orders...
+                Loading recent orders...
               </Text>
             ) : pastOrders.length === 0 ? (
               <Text className="paragraph-medium text-gray-200">
-                No past orders yet.
+                No recent orders yet.
               </Text>
             ) : (
               pastOrders.map((order) => (
