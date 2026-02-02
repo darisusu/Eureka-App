@@ -225,6 +225,7 @@ const Cart = () => {
     discountCents: 0,
     totalCents: 0,
   });
+  const [hasServerTotals, setHasServerTotals] = useState(false);
 
 
   // Updates pricing state: subtotal, discount, total based on current cart & promo.
@@ -239,9 +240,11 @@ const Cart = () => {
     if (items.length === 0) {
       setPricing({ subtotalCents: 0, discountCents: 0, totalCents: 0 });
       setAppliedPromo(null);
+      setHasServerTotals(false);
       return null;
     }
 
+    setHasServerTotals(false);
     try {
       // Call backend to calculate total 
       const result = await calculateCartTotals({
@@ -260,6 +263,7 @@ const Cart = () => {
       if (result.promo?.codeUpper) {
         setPromoCode(result.promo.codeUpper); // Update user input to what was accepted (e.g casing, trimming)
       }
+      setHasServerTotals(true);
       return result;
 
     // On error, reset promo and pricing; optionally re-throw error.
@@ -270,6 +274,7 @@ const Cart = () => {
         discountCents: 0,
         totalCents: prev.subtotalCents,
       }));
+      setHasServerTotals(false);
 
       if (options?.showError) {
         throw error;
@@ -288,10 +293,14 @@ const Cart = () => {
   };
   
 
-  // Get subtotal and discount from backend-calculated pricing state
-  // Initialized to 0, updated via refreshTotals calls
-  const subtotalCents = pricing.subtotalCents;
-  const discountCents = pricing.discountCents;
+  // UI totals: use local subtotal immediately, then swap to server-validated totals.
+  const localSubtotalCents = items.reduce(
+    (sum, item) => sum + Math.round(item.price * 100) * item.quantity,
+    0
+  );
+  const subtotalCents = hasServerTotals ? pricing.subtotalCents : localSubtotalCents;
+  const discountCents = hasServerTotals ? pricing.discountCents : 0;
+  const promoCodeForUI = hasServerTotals ? appliedPromo?.codeUpper : null;
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -365,6 +374,7 @@ const Cart = () => {
         totalCents: checkout.totalCents,
       });
       setAppliedPromo(checkout.promo);
+      setHasServerTotals(true);
 
       if (!checkout.paymentRequired) {
         clearCart();
@@ -456,7 +466,7 @@ const Cart = () => {
             totalItems={totalItems}
             subtotalCents={subtotalCents}
             discountCents={discountCents}
-            promoCode={appliedPromo?.codeUpper}
+            promoCode={promoCodeForUI}
             estimatedTime={estimatedTime}
             isSubmitting={isSubmitting}
             onApplyPromo={handleApplyPromo}

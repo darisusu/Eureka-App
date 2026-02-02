@@ -70,7 +70,7 @@ export const createUser = async ({email,password,name}: CreateUserParams) => { /
         return await databases.createDocument(
             appwriteConfig.databaseId, //databaseId
             appwriteConfig.userCollectionId, //collectionId
-            ID.unique(), //randomized unique id i.e documentId
+            newAccount.$id, //use account id for user document id
             {email, name, accountId: newAccount.$id, avatar: avatarUrl} //data
         );
     

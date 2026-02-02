@@ -4,9 +4,11 @@ import { Link, router } from 'expo-router'
 import CustomInput from '@/components/CustomInput'
 import CustomButton from '@/components/CustomButton'
 import { createUser } from '@/lib/appwrite'
+import useAuthStore from "@/store/auth.store";
 
 const SignUp = () => {
 
+  const { fetchAuthenticatedUser } = useAuthStore();
   const [isSubmitting, setIsSubmitting] = useState(false); 
   const [form, setForm] = useState({name: '', email: '', password: ''}); 
 
@@ -22,6 +24,7 @@ const SignUp = () => {
     try {
       // Call Appwrite sign-up API function here
       await createUser({name, email, password});
+      await fetchAuthenticatedUser();
       router.replace('/'); // Redirect to home page after successful sign-in
       
     } catch (error: any) {
