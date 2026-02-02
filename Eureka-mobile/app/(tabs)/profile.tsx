@@ -5,8 +5,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import CustomButton from "@/components/CustomButton";
 import { getRecentOrders, signOut } from "@/lib/appwrite";
 import useAuthStore from "@/store/auth.store";
+import useOrdersStore, { RECENT_ORDERS_LIMIT } from "@/store/orders.store";
 import { router } from "expo-router";
-import type { OrderHistoryEntry, OrderStatus } from "@/type";
+import type { OrderStatus } from "@/type";
 
 const statusLabels: Record<OrderStatus, string> = {
   pending_payment: "Pending payment",
@@ -17,19 +18,20 @@ const statusLabels: Record<OrderStatus, string> = {
   collected: "Collected",
 };
 
-// Number of recent orders to fetch and display on profile page
-const RECENT_ORDERS_LIMIT = 3;
-
 const Profile = () => {
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const [pastOrders, setPastOrders] = useState<OrderHistoryEntry[]>([]);
   const [isOrdersLoading, setIsOrdersLoading] = useState(false);
   const { user, isLoading, setIsAuthenticated, setUser } = useAuthStore();
+  const recentOrders = useOrdersStore((state) => state.recentOrders);
+  const setRecentOrders = useOrdersStore((state) => state.setRecentOrders);
 
   useEffect(() => {
     const loadOrders = async () => {
       if (!user?.id) {
-        setPastOrders([]);
+        if (isLoading) {
+          return;
+        }
+        setRecentOrders([]);
         return;
       }
 
@@ -39,7 +41,7 @@ const Profile = () => {
           userId: user.id,
           limit: RECENT_ORDERS_LIMIT,
         });
-        setPastOrders(orders);
+        setRecentOrders(orders);
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Failed to load past orders.";
@@ -50,7 +52,7 @@ const Profile = () => {
     };
 
     void loadOrders();
-  }, [user?.id]);
+  }, [user?.id, isLoading]);
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -94,12 +96,12 @@ const Profile = () => {
               <Text className="paragraph-medium text-gray-200">
                 Loading recent orders...
               </Text>
-            ) : pastOrders.length === 0 ? (
+            ) : recentOrders.length === 0 ? (
               <Text className="paragraph-medium text-gray-200">
                 No recent orders yet.
               </Text>
             ) : (
-              pastOrders.map((order) => (
+              recentOrders.map((order) => (
                 <View
                   key={order.orderId}
                   className="border border-gray-200 rounded-2xl p-4 bg-white"

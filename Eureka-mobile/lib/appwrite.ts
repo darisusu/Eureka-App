@@ -115,18 +115,32 @@ export const getCurrentUser = async (): Promise<User | null> => {
             if (!isNotFound) {
                 throw error;
             }
-            const avatarUrl = avatars.getInitialsURL(currentAccount.name);
-            doc = await databases.createDocument(
+            // check if user document exists by querying accountId field
+            const fallback = await databases.listDocuments(
                 appwriteConfig.databaseId,
                 appwriteConfig.userCollectionId,
-                currentAccount.$id,
-                {
-                    email: currentAccount.email,
-                    name: currentAccount.name,
-                    accountId: currentAccount.$id,
-                    avatar: avatarUrl,
-                }
+                [
+                    Query.equal("accountId", currentAccount.$id),
+                    Query.limit(1),
+                ]
             );
+            if (fallback.total > 0) {
+                doc = fallback.documents[0];
+            } else {
+                // create user document if not found
+                const avatarUrl = avatars.getInitialsURL(currentAccount.name);
+                doc = await databases.createDocument(
+                    appwriteConfig.databaseId,
+                    appwriteConfig.userCollectionId,
+                    currentAccount.$id,
+                    {
+                        email: currentAccount.email,
+                        name: currentAccount.name,
+                        accountId: currentAccount.$id,
+                        avatar: avatarUrl,
+                    }
+                );
+            }
         }
 
         const user: User = {
