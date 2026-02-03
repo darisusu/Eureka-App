@@ -276,7 +276,7 @@ export default function StaffScreen() {
                                 >
                                   {item.qty}x {item.name}
                                   {item.specialRequest
-                                    ? ` (${item.specialRequest})`
+                                    ? ` (${item.specialRequest}*)`
                                     : ""}
                                 </Text>
                               ))
