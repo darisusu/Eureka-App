@@ -1,6 +1,7 @@
 # Staff UI (MVP)
 
 This document defines the MVP staff UI behavior for live order tracking and status updates.
+Assume staff UI would be on a shared iPad in stall.
 
 ---
 
