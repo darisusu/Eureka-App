@@ -48,15 +48,23 @@ export const storage = new Storage(client);
 export const functions = new Functions(client);
 const avatars = new Avatars(client);
 
+const formatDisplayName = (name: string) =>
+    name
+        .trim()
+        .split(/\s+/)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(" ");
+
 //defining functions that interact with appwrite services
 export const createUser = async ({email,password,name}: CreateUserParams) => { // parameter type: CreateUserParams, destructured so can use each field directly
     try {
+        const formattedName = formatDisplayName(name);
         //create account on appwrite auth (not shown within database)
         const newAccount = await account.create(
             ID.unique(), // generates unique id
             email,
             password,
-            name
+            formattedName
         );
 
         if (!newAccount) {
@@ -64,14 +72,14 @@ export const createUser = async ({email,password,name}: CreateUserParams) => { /
         }
         await signIn({email,password});
 
-        const avatarUrl = avatars.getInitialsURL(name); //generate avatar image using initials and store into database
+        const avatarUrl = avatars.getInitialsURL(formattedName); //generate avatar image using initials and store into database
 
         // create new user in user collection
         return await databases.createDocument(
             appwriteConfig.databaseId, //databaseId
             appwriteConfig.userCollectionId, //collectionId
             newAccount.$id, //use account id for user document id
-            {email, name, accountId: newAccount.$id, avatar: avatarUrl} //data
+            {email, name: formattedName, accountId: newAccount.$id, avatar: avatarUrl} //data
         );
     
 
