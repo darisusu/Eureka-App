@@ -27,11 +27,14 @@ const TabBarIcon = ({ focused, icon, title }: TabBarIconProps) => (
 );
 
 export default function TabLayout() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const pathname = usePathname();
 
   if (!isAuthenticated) {
     return <Redirect href="/sign-in" />;
+  }
+  if (user?.role === "staff") {
+    return <Redirect href="/staff" />;
   }
   const tabBarHeight = 80;
   const tabBarBottom = 40;

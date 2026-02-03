@@ -24,8 +24,8 @@ const SignUp = () => {
     try {
       // Call Appwrite sign-up API function here
       await createUser({name, email, password});
-      await fetchAuthenticatedUser();
-      router.replace('/'); // Redirect to home page after successful sign-in
+      const user = await fetchAuthenticatedUser();
+      router.replace(user?.role === "staff" ? "/staff" : "/"); // Redirect after successful sign-in
       
     } catch (error: any) {
       Alert.alert('Error', error.message);

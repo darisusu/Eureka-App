@@ -164,6 +164,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
             name: doc.name,
             email: doc.email,
             avatar: doc.avatar,
+            role: doc.role ?? "customer" // default to customer if role not defined
         };
 
         return user;
