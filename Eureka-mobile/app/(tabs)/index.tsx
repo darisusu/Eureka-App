@@ -22,13 +22,10 @@ const FONT_SIZE = Math.min(HEADER_HEIGHT * TEXT_SIZE_PCT, SCREEN_WIDTH * 0.65);
 
 // --- DEFAULT/FALLBACK DATA ---
 const fallbackOrderDetails = {
-  id: "#2847",
-  status: "ready",
-  time: "15 min",
-  items: [
-    { qty: 2, name: "Sliced Fish Soup (Clear)" },
-    { qty: 1, name: "Teh C" },
-  ],
+  id: "#-",
+  status: "Pending order",
+  time: "- min",
+  items: [],
 };
 
 const parseItemsSummary = (summary: string) =>
@@ -65,6 +62,15 @@ export default function Index() {
       }
     : fallbackOrderDetails;
   const currentStatus = orderDetails.status;
+  const statusText =
+    preparationSteps.includes(currentStatus as (typeof preparationSteps)[number])
+      ? statusTextMap[currentStatus as (typeof preparationSteps)[number]]
+      : "Pending order";
+      const progressPct = preparationSteps.includes(currentStatus as (typeof preparationSteps)[number])
+    ? ((preparationSteps.indexOf(currentStatus as (typeof preparationSteps)[number]) + 1) /
+        preparationSteps.length) *
+      100
+    : 0;
 
   if (!fontsLoaded) return null;
 
@@ -129,19 +135,25 @@ export default function Index() {
                 </View>
               </View>
               <Text className="text-orange-100 text-base font-medium mt-1">
-                {statusTextMap[currentStatus]}
+                {statusText}
               </Text>
             </View>
 
             {/* CARD BODY (Items) */}
             <View className="p-6 bg-white">
-              {orderDetails.items.map((item, index) => (
-                <View key={index} className="flex-row items-center mb-3">
-                  <Text className="text-gray-800 text-lg font-medium">
-                    {item.qty}x  {item.name}
-                  </Text>
+              {orderDetails.items.length === 0 ? (
+                <View className="flex-row items-center mb-3">
+                  <Text className="text-gray-800 text-lg font-medium">-</Text>
                 </View>
-              ))}
+              ) : (
+                orderDetails.items.map((item, index) => (
+                  <View key={index} className="flex-row items-center mb-3">
+                    <Text className="text-gray-800 text-lg font-medium">
+                      {item.qty}x  {item.name}
+                    </Text>
+                  </View>
+                ))
+              )}
 
               {/* DIVIDER */}
               <View className="h-[1px] bg-gray-100 my-6" />
@@ -171,14 +183,7 @@ export default function Index() {
                    */}
                   <View
                     className="h-full bg-orange-500 rounded-full"
-                    style={{
-                      width: `${Math.max(
-                        0,
-                        ((preparationSteps.indexOf(currentStatus) + 1) /
-                          preparationSteps.length) *
-                          100
-                      )}%`,
-                    }}
+                    style={{ width: `${Math.max(0, progressPct)}%` }}
                   />
                 </View>
               </View>
