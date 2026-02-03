@@ -1,5 +1,5 @@
 import CustomButton from "@/components/CustomButton";
-import { getActiveOrders, signOut } from "@/lib/appwrite";
+import { getActiveOrders, getCollectedOrders, signOut } from "@/lib/appwrite";
 import useAuthStore from "@/store/auth.store";
 import type { StaffOrder } from "@/type";
 import { router } from "expo-router";
@@ -9,13 +9,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as ScreenOrientation from "expo-screen-orientation";
 
 export default function StaffScreen() {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "settings">(
-    "dashboard"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "dashboard" | "history" | "settings"
+  >("dashboard");
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [orders, setOrders] = useState<StaffOrder[]>([]);
   const [isOrdersLoading, setIsOrdersLoading] = useState(true);
   const [ordersError, setOrdersError] = useState<string | null>(null);
+  const [historyOrders, setHistoryOrders] = useState<StaffOrder[]>([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const { user, setIsAuthenticated, setUser, isLoading } = useAuthStore();
 
   useEffect(() => {
@@ -71,6 +74,40 @@ export default function StaffScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadHistory = async () => {
+      try {
+        const data = await getCollectedOrders();
+        if (isMounted) {
+          setHistoryOrders(data);
+          setHistoryError(null);
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to load order history.";
+        if (isMounted) {
+          setHistoryError(message);
+        }
+      } finally {
+        if (isMounted) {
+          setIsHistoryLoading(false);
+        }
+      }
+    };
+
+    void loadHistory();
+    const interval = setInterval(loadHistory, 15000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   const getTimeLabel = (order: StaffOrder) => {
     const reference =
       order.status === "received" ? order.createdAt : order.updatedAt;
@@ -119,6 +156,20 @@ export default function StaffScreen() {
               }`}
             >
               Dashboard
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setActiveTab("history")}
+            className={`px-3 py-1.5 rounded-full ${
+              activeTab === "history" ? "bg-black" : "bg-gray-100"
+            }`}
+          >
+            <Text
+              className={`text-xs font-bold ${
+                activeTab === "history" ? "text-white" : "text-gray-500"
+              }`}
+            >
+              History
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -247,6 +298,70 @@ export default function StaffScreen() {
               </View>
             ))}
           </View>
+        </View>
+      ) : activeTab === "history" ? ( // History Tab
+        <View className="flex-1 px-6 py-4">
+          <Text className="text-lg font-bold text-gray-900">History</Text>
+          <Text className="text-xs text-gray-500 mt-1">
+            Collected orders (latest first).
+          </Text>
+          <ScrollView className="mt-4" contentContainerStyle={{ gap: 12 }}>
+            {isHistoryLoading ? (
+              <View className="border border-dashed border-gray-300 rounded-xl p-3">
+                <Text className="text-sm text-gray-400">
+                  Loading history...
+                </Text>
+              </View>
+            ) : historyError ? (
+              <View className="border border-dashed border-gray-300 rounded-xl p-3">
+                <Text className="text-sm text-gray-400">{historyError}</Text>
+              </View>
+            ) : historyOrders.length === 0 ? (
+              <View className="border border-dashed border-gray-300 rounded-xl p-3">
+                <Text className="text-sm text-gray-400">
+                  No collected orders yet.
+                </Text>
+              </View>
+            ) : (
+              historyOrders.map((order) => (
+                <View
+                  key={order.orderId}
+                  className="bg-white border border-gray-200 rounded-xl p-4"
+                >
+                  <View className="flex-row items-center justify-between">
+                    <Text className="text-base font-bold text-gray-900">
+                      {order.orderNumber}
+                    </Text>
+                    <Text className="text-xs font-semibold text-gray-500">
+                      {getTimeLabel(order)}
+                    </Text>
+                  </View>
+                  <Text className="text-xs text-gray-500 mt-1">
+                    {order.userName}
+                  </Text>
+                  <View className="mt-3 gap-1">
+                    {order.items.length === 0 ? (
+                      <Text className="text-xs text-gray-400">
+                        Items unavailable.
+                      </Text>
+                    ) : (
+                      order.items.map((item, index) => (
+                        <Text
+                          key={`${order.orderId}-history-${index}`}
+                          className="text-xs text-gray-700"
+                        >
+                          {item.qty}x {item.name}
+                          {item.specialRequest
+                            ? ` (${item.specialRequest})`
+                            : ""}
+                        </Text>
+                      ))
+                    )}
+                  </View>
+                </View>
+              ))
+            )}
+          </ScrollView>
         </View>
       ) : ( // Settings Tab
         <View className="flex-1 px-6 py-6">

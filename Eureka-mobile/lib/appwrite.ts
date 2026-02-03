@@ -318,7 +318,7 @@ export const createCheckout = async ({
   return response.data;
 };
 
-// Confirms payment status on the server and updates the order to paid.
+// Confirms payment status on the server and updates the order to received.
 export const confirmCheckoutPayment = async ({
   userId,
   orderId,
@@ -454,6 +454,71 @@ export const getActiveOrders = async (): Promise<StaffOrder[]> => {
     appwriteConfig.databaseId,
     appwriteConfig.ordersItemsCollectionId,
     [Query.equal("orderId", orderIds), Query.limit(300)]
+  );
+  const items = itemsResponse.documents as unknown as OrderItemDocument[];
+
+  const itemsByOrderId = new Map<string, OrderItemDocument[]>();
+  for (const item of items) {
+    const existing = itemsByOrderId.get(item.orderId) ?? [];
+    existing.push(item);
+    itemsByOrderId.set(item.orderId, existing);
+  }
+
+  const userIds = Array.from(new Set(orders.map((order) => order.userId)));
+  const usersById = new Map<string, { name?: string }>();
+  if (userIds.length > 0) {
+    const usersResponse = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.userCollectionId,
+      [Query.equal("$id", userIds), Query.limit(userIds.length)]
+    );
+    for (const user of usersResponse.documents) {
+      usersById.set(user.$id, { name: (user as { name?: string }).name });
+    }
+  }
+
+  return orders.map((order) => {
+    const orderItems = itemsByOrderId.get(order.$id) ?? [];
+    const itemsSummary = orderItems.map((item) => ({
+      name: item.name,
+      qty: item.qty,
+      specialRequest: item.specialRequest,
+    }));
+
+    return {
+      orderId: order.$id,
+      orderNumber: order.orderNumber || order.$id,
+      status: order.status,
+      createdAt: order.$createdAt,
+      updatedAt: order.$updatedAt,
+      userName: usersById.get(order.userId)?.name ?? "—",
+      items: itemsSummary,
+    };
+  });
+};
+
+export const getCollectedOrders = async (): Promise<StaffOrder[]> => {
+  const ordersResponse = await databases.listDocuments(
+    appwriteConfig.databaseId,
+    appwriteConfig.ordersCollectionId,
+    [
+      Query.equal("isPaid", true),
+      Query.equal("status", "collected"),
+      Query.orderDesc("$updatedAt"),
+      Query.limit(200),
+    ]
+  );
+
+  const orders = ordersResponse.documents as unknown as OrderDocument[];
+  if (orders.length === 0) {
+    return [];
+  }
+
+  const orderIds = orders.map((order) => order.$id);
+  const itemsResponse = await databases.listDocuments(
+    appwriteConfig.databaseId,
+    appwriteConfig.ordersItemsCollectionId,
+    [Query.equal("orderId", orderIds), Query.limit(600)]
   );
   const items = itemsResponse.documents as unknown as OrderItemDocument[];
 
