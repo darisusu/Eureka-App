@@ -21,6 +21,7 @@ export type User = {
     name: string;
     email: string;
     avatar: string;
+    role: "staff" | "customer";
 }
 
 export type OrderStatus =

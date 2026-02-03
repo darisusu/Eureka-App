@@ -79,7 +79,13 @@ export const createUser = async ({email,password,name}: CreateUserParams) => { /
             appwriteConfig.databaseId, //databaseId
             appwriteConfig.userCollectionId, //collectionId
             newAccount.$id, //use account id for user document id
-            {email, name: formattedName, accountId: newAccount.$id, avatar: avatarUrl} //data
+            {
+                email,
+                name: formattedName,
+                accountId: newAccount.$id,
+                avatar: avatarUrl,
+                role: "customer",
+            } //data
         );
     
 
@@ -146,6 +152,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
                         name: currentAccount.name,
                         accountId: currentAccount.$id,
                         avatar: avatarUrl,
+                        role: "customer",
                     }
                 );
             }
