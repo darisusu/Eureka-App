@@ -74,6 +74,22 @@ export interface OrderItemDocument extends Models.Document {
     specialRequest?: string;
 }
 
+export type StaffOrderItem = {
+    name: string;
+    qty: number;
+    specialRequest?: string;
+};
+
+export type StaffOrder = {
+    orderId: string;
+    orderNumber: string;
+    status: OrderStatus;
+    createdAt: string;
+    updatedAt: string;
+    userName: string;
+    items: StaffOrderItem[];
+};
+
 export type OrderHistoryEntry = {
     orderId: string;
     orderNumber: string;

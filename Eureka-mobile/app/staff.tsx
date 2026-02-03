@@ -1,6 +1,7 @@
 import CustomButton from "@/components/CustomButton";
-import { signOut } from "@/lib/appwrite";
+import { getActiveOrders, signOut } from "@/lib/appwrite";
 import useAuthStore from "@/store/auth.store";
+import type { StaffOrder } from "@/type";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
@@ -12,6 +13,9 @@ export default function StaffScreen() {
     "dashboard"
   );
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [orders, setOrders] = useState<StaffOrder[]>([]);
+  const [isOrdersLoading, setIsOrdersLoading] = useState(true);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
   const { user, setIsAuthenticated, setUser, isLoading } = useAuthStore();
 
   useEffect(() => {
@@ -27,12 +31,61 @@ export default function StaffScreen() {
 
     lockLandscape();
 
+    // Cleanup: unlock orientation on unmount.
     return () => {
       ScreenOrientation.unlockAsync().catch(() => {
         // Ignore unlock failures.
       });
     };
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadOrders = async () => {
+      try {
+        const data = await getActiveOrders();
+        if (isMounted) {
+          setOrders(data);
+          setOrdersError(null);
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to load orders.";
+        if (isMounted) {
+          setOrdersError(message);
+        }
+      } finally {
+        if (isMounted) {
+          setIsOrdersLoading(false);
+        }
+      }
+    };
+
+    void loadOrders();
+    const interval = setInterval(loadOrders, 10000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const getTimeLabel = (order: StaffOrder) => {
+    const reference =
+      order.status === "received" ? order.createdAt : order.updatedAt;
+    const minutes = Math.max(
+      0,
+      Math.floor((Date.now() - new Date(reference).getTime()) / 60000)
+    );
+    if (order.status === "received") {
+      return `Waiting ${minutes} min`;
+    }
+    if (order.status === "preparing") {
+      return `Cooking ${minutes} min`;
+    }
+    return `Ready ${minutes} min ago`;
+  };
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -85,37 +138,117 @@ export default function StaffScreen() {
         </View>
       </View>
 
-      {activeTab === "dashboard" ? (
+      {activeTab === "dashboard" ? ( // Dashboard Tab
         <View className="flex-1 px-6 py-4">
           <View className="flex-row gap-4 flex-1">
             {[
-              { key: "received", count: 0 },
-              { key: "preparing", count: 0 },
-              { key: "ready", count: 0 },
+              { key: "received", actionLabel: "Start" },
+              { key: "preparing", actionLabel: "Ready" },
+              { key: "ready", actionLabel: "Collected" },
             ].map((column) => (
-              <View key={column.key} className="flex-1 bg-gray-50 rounded-2xl p-4">
+              <View
+                key={column.key}
+                className="flex-1 bg-gray-50 rounded-2xl p-4"
+              >
                 <View className="flex-row items-center justify-between">
                   <Text className="text-base font-bold text-gray-900">
                     {column.key.toUpperCase()}
                   </Text>
                   <View className="px-2 py-0.5 rounded-full bg-white border border-gray-200">
                     <Text className="text-xs font-bold text-gray-600">
-                      {column.count}
+                      {orders.filter((order) => order.status === column.key)
+                        .length ?? 0}
                     </Text>
                   </View>
                 </View>
-                <ScrollView className="mt-4" contentContainerStyle={{ gap: 12 }}>
-                  <View className="border border-dashed border-gray-300 rounded-xl p-3">
-                    <Text className="text-sm text-gray-400">
-                      No orders yet.
-                    </Text>
-                  </View>
+                <ScrollView
+                  className="mt-4"
+                  contentContainerStyle={{ gap: 12 }}
+                >
+                  {isOrdersLoading ? (
+                    <View className="border border-dashed border-gray-300 rounded-xl p-3">
+                      <Text className="text-sm text-gray-400">
+                        Loading orders...
+                      </Text>
+                    </View>
+                  ) : ordersError ? (
+                    <View className="border border-dashed border-gray-300 rounded-xl p-3">
+                      <Text className="text-sm text-gray-400">
+                        {ordersError}
+                      </Text>
+                    </View>
+                  ) : orders.filter((order) => order.status === column.key)
+                      .length === 0 ? (
+                    <View className="border border-dashed border-gray-300 rounded-xl p-3">
+                      <Text className="text-sm text-gray-400">
+                        No orders yet.
+                      </Text>
+                    </View>
+                  ) : (
+                    [...orders]
+                      .filter((order) => order.status === column.key)
+                      .sort((a, b) => {
+                        const aTime = new Date(
+                          a.status === "received" ? a.createdAt : a.updatedAt
+                        ).getTime();
+                        const bTime = new Date(
+                          b.status === "received" ? b.createdAt : b.updatedAt
+                        ).getTime();
+                        return bTime - aTime;
+                      })
+                      .map((order) => (
+                        <View
+                          key={order.orderId}
+                          className="bg-white border border-gray-200 rounded-xl p-4"
+                        >
+                          <View className="flex-row items-center justify-between">
+                            <Text className="text-base font-bold text-gray-900">
+                              {order.orderNumber}
+                            </Text>
+                            <Text className="text-xs font-semibold text-gray-500">
+                              {getTimeLabel(order)}
+                            </Text>
+                          </View>
+                          <Text className="text-xs text-gray-500 mt-1">
+                            {order.userName}
+                          </Text>
+                          <View className="mt-3 gap-1">
+                            {order.items.length === 0 ? (
+                              <Text className="text-xs text-gray-400">
+                                Items unavailable.
+                              </Text>
+                            ) : (
+                              order.items.map((item, index) => (
+                                <Text
+                                  key={`${order.orderId}-${index}`}
+                                  className="text-xs text-gray-700"
+                                >
+                                  {item.qty}x {item.name}
+                                  {item.specialRequest
+                                    ? ` (${item.specialRequest})`
+                                    : ""}
+                                </Text>
+                              ))
+                            )}
+                          </View>
+                          <TouchableOpacity
+                            className="mt-4 bg-black rounded-full px-4 py-2 self-start"
+                            activeOpacity={0.8}
+                            onPress={() => {}}
+                          >
+                            <Text className="text-xs font-bold text-white">
+                              {column.actionLabel}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))
+                  )}
                 </ScrollView>
               </View>
             ))}
           </View>
         </View>
-      ) : (
+      ) : ( // Settings Tab
         <View className="flex-1 px-6 py-6">
           <Text className="text-lg font-bold text-gray-900">Staff Settings</Text>
           <View className="mt-6">
