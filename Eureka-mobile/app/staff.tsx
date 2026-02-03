@@ -193,9 +193,9 @@ export default function StaffScreen() {
         <View className="flex-1 px-6 py-4">
           <View className="flex-row gap-4 flex-1">
             {[
-              { key: "received", actionLabel: "Start" },
-              { key: "preparing", actionLabel: "Ready" },
-              { key: "ready", actionLabel: "Collected" },
+              { key: "received", actionLabel: "Start Prep" },
+              { key: "preparing", actionLabel: "Mark Ready" },
+              { key: "ready", actionLabel: "Mark Collected" },
             ].map((column) => (
               <View
                 key={column.key}

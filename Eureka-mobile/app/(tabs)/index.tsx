@@ -1,5 +1,5 @@
 import { Text, View, Dimensions, ScrollView, TouchableOpacity } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFonts, PlayfairDisplay_900Black } from "@expo-google-fonts/playfair-display";
 import { Feather } from "@expo/vector-icons"; // Icon for the timer
 import { router } from "expo-router";
@@ -49,6 +49,7 @@ const statusTextMap: Record<typeof preparationSteps[number], string> = {
 
 export default function Index() {
   const [fontsLoaded] = useFonts({ PlayfairDisplay_900Black });
+  const insets = useSafeAreaInsets();
   const latestOrder = useOrdersStore((state) => state.recentOrders[0]);
 
   const orderDetails = latestOrder
@@ -78,7 +79,7 @@ export default function Index() {
     <View className="flex-1 bg-gray-50">
       <View 
         className="absolute w-[200%] h-[100%] bg-gray-50 rounded-full -left-[50%]" 
-        style={{ top: HEADER_HEIGHT }} 
+        style={{ top: HEADER_HEIGHT + insets.top }} 
       />
 
       {/* =================================================
@@ -86,7 +87,7 @@ export default function Index() {
       ================================================= */}
       <View 
         className="absolute top-0 left-0 right-0 items-center justify-center z-0"
-        style={{ height: HEADER_HEIGHT, top: -20 }}
+        style={{ height: HEADER_HEIGHT, top: insets.top }}
       >
         <Text 
           className="text-primary shadow-sm opacity-90"
@@ -108,9 +109,12 @@ export default function Index() {
       {/* =================================================
           LAYER 3: CONTENT (Order Card)
       ================================================= */}
-      <SafeAreaView className="flex-1" edges={['bottom']}>
+      <SafeAreaView className="flex-1" edges={['bottom', 'top']}>
         <ScrollView 
-          contentContainerStyle={{ flexGrow: 1, paddingTop: HEADER_HEIGHT - 60 }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingTop: HEADER_HEIGHT + insets.top - 60,
+          }}
           className="px-6 -mt-2"
           showsVerticalScrollIndicator={false}
         >
