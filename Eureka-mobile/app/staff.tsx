@@ -121,10 +121,10 @@ export default function StaffScreen() {
       Math.floor((Date.now() - new Date(reference).getTime()) / 60000)
     );
     if (order.status === "received") {
-      return `Received ${minutes} min ago`;
+      return `Waiting ${minutes} min`;
     }
     if (order.status === "preparing") {
-      return `Preping ${minutes} min`;
+      return `Cooking ${minutes} min`;
     }
     return `Ready ${minutes} min ago`;
   };
