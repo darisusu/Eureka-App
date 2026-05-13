@@ -1,6 +1,6 @@
-# Eureka Preorder & Payment System
+# Eureka! — High-Volume F&B Pre-order & Payment System
 
-Lightweight preorder + prepay mobile app for grab-and-go food stalls. Designed around fast pickup, reliable prep-time estimates, and low operational overhead.
+<img width="500" height="600" alt="image" src="https://github.com/user-attachments/assets/e97c3863-a5e5-47e3-b50a-c7efe4b10e5d" />
 
 ## What It Does
 
