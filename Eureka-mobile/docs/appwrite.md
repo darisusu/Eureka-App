@@ -4,6 +4,7 @@
 - email (string)
 - accountId (string)
 - avatar (url)
+- role (enum: "staff", "customer", default: "customer"; assign on signup, only manually changed to "staff" in Appwrite)
 - document id: use Appwrite account.$id for a 1:1 mapping (profile doc fetched by id) (innate appwrite id)
 
 ## orders

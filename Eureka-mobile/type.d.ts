@@ -21,6 +21,7 @@ export type User = {
     name: string;
     email: string;
     avatar: string;
+    role: "staff" | "customer";
 }
 
 export type OrderStatus =
@@ -72,6 +73,22 @@ export interface OrderItemDocument extends Models.Document {
     qty: number;
     specialRequest?: string;
 }
+
+export type StaffOrderItem = {
+    name: string;
+    qty: number;
+    specialRequest?: string;
+};
+
+export type StaffOrder = {
+    orderId: string;
+    orderNumber: string;
+    status: OrderStatus;
+    createdAt: string;
+    updatedAt: string;
+    userName: string;
+    items: StaffOrderItem[];
+};
 
 export type OrderHistoryEntry = {
     orderId: string;

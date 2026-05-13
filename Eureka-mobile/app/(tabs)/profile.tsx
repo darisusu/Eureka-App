@@ -9,15 +9,6 @@ import useOrdersStore, { RECENT_ORDERS_LIMIT } from "@/store/orders.store";
 import { router } from "expo-router";
 import type { OrderStatus } from "@/type";
 
-const statusLabels: Record<OrderStatus, string> = {
-  pending_payment: "Pending payment",
-  paid: "Paid",
-  received: "Received",
-  preparing: "Preparing",
-  ready: "Ready",
-  collected: "Collected",
-};
-
 const Profile = () => {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isOrdersLoading, setIsOrdersLoading] = useState(false);
@@ -120,9 +111,6 @@ const Profile = () => {
                   <View className="flex-row justify-between items-center mt-3">
                     <Text className="paragraph-bold text-dark-100">
                       ${order.total.toFixed(2)}
-                    </Text>
-                    <Text className="paragraph-bold text-primary">
-                      {statusLabels[order.status] ?? order.status}
                     </Text>
                   </View>
                 </View>

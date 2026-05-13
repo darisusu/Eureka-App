@@ -158,9 +158,9 @@ module.exports = async ({ req, res, log, error }) => {
 
       await databases.updateDocument(databaseId, ordersCollectionId, orderId, {
         isPaid: true,
-        status: "paid",
+        status: "received",
       });
-      logStep(log, "order_marked_paid", { orderId });
+      logStep(log, "order_marked_received", { orderId });
 
       if (orderDoc.promoId) {
         logStep(log, "promo_redemption_check", { orderId });
@@ -192,7 +192,7 @@ module.exports = async ({ req, res, log, error }) => {
       });
       return res.json({
         ok: true,
-        data: { orderId, status: "paid", isPaid: true },
+        data: { orderId, status: "received", isPaid: true },
       });
     }
 
@@ -352,7 +352,7 @@ module.exports = async ({ req, res, log, error }) => {
       orderId,
     });
 
-    // If total is free, skip Stripe and immediately mark paid.
+    // If total is free, skip Stripe and immediately mark received.
     if (totalCents === 0) {
       logStep(log, "free_order_start", { orderId });
       const orderDoc = await databases.createDocument(
@@ -362,7 +362,7 @@ module.exports = async ({ req, res, log, error }) => {
         {
           userId,
           orderNumber,
-          status: "paid",
+          status: "received",
           isPaid: true,
           total: totalCents / 100,
           promoId: promo?.promoId,

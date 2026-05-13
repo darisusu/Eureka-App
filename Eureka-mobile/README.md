@@ -1,108 +1,55 @@
-# Eureka Preorder & Payment System (MVP)
+# Eureka Preorder & Payment System
 
 Lightweight preorder + prepay mobile app for grab-and-go food stalls. Designed around fast pickup, reliable prep-time estimates, and low operational overhead.
 
-## Product Summary (from PRD)
+## What It Does
 
-Goals:
-- Preorder + prepay before food enters the kitchen queue
-- Reliable estimated ready times
-- Clear order numbers and status visibility
-- Minimal operations for staff
+Customers browse a menu, add items to cart (with per-item special requests), and pay before the order enters the kitchen queue. Staff see a live order dashboard and update status as orders are prepared and collected.
 
-Non-goals (MVP):
-- Delivery
-- Dine-in table management
-- In-store POS
-- Inventory management
-
-## Current Features Implemented
-
-Customer:
-- Sign up / sign in (Appwrite)
-- Menu browse + search + category filter
-- Cart with quantity adjustments
-- Special request per item (stored on order items)
-- Create order + order items in Appwrite
-
-Platform:
-- Expo Router navigation
-- Zustand state for auth + cart
-- Appwrite client integration
-
-## In Progress / Missing (per PRD)
-
-Customer:
-- Payment integration (Stripe or equivalent)
-- Estimated ready time display and calculation
-- Order status tracking UI
-- Order history
-- Notifications (order received / ready)
-
-Staff:
-- Admin/staff role gating
-- Staff order dashboard with status updates
+**Non-goals (MVP):** delivery, dine-in table management, in-store POS, inventory management.
 
 ## Tech Stack
 
-- Expo + React Native
+- [Expo](https://expo.dev) + React Native
 - Expo Router (file-based navigation)
-- Zustand (state)
-- Appwrite (auth + database + storage)
+- Zustand (state management)
+- [Appwrite](https://appwrite.io) (auth, database, storage, cloud functions)
 - NativeWind (Tailwind-style classes)
+- Stripe (payments)
 
-## Project Structure
+## Getting Started
 
-- `app/` screens and layouts
-- `components/` reusable UI
-- `store/` Zustand stores (auth, cart)
-- `lib/appwrite.ts` Appwrite client + API helpers
-- `lib/seed.ts` seed script for menu/category data
-- `lib/data.ts` dummy data source for seeding
+**1. Install dependencies**
+```bash
+npm install
+```
 
-## Environment Setup
+**2. Configure environment**
 
-Create a `.env` file with:
+Create a `.env` file — see `docs/appwrite.md` for the full list of required variables. At minimum:
 ```
 EXPO_PUBLIC_APPWRITE_ENDPOINT=...
 EXPO_PUBLIC_APPWRITE_PROJECT_ID=...
 ```
 
-## Appwrite Collections
-
-Required collections:
-- `user`
-- `categories`
-- `menu` (fields: name, description, image_url, price, categories, prep_time_min)
-- `orders` (userId, status, isPaid, total, orderNumber)
-- `order_items` (orderId, menuId, name, price, qty, specialRequest)
-### To be updated
-
-## Running the App
-
-Install dependencies:
-```
-npm install
-```
-
-Run:
-```
+**3. Run**
+```bash
 npx expo start
 ```
 
-## Seeding Appwrite Data
+## Seeding Menu Data
 
-The seed script clears and repopulates categories + menu:
+Clears and repopulates categories + menu items in Appwrite. Only run against development data.
+
+```bash
+npx tsx lib/seed.ts
 ```
-node -e "import('./lib/seed.ts').then(m => m.default())"
-```
 
-Make sure `lib/data.ts` has valid image URLs; the seed script uploads images to Appwrite storage.
+Ensure `lib/data.ts` has valid image URLs before seeding — the script uploads images to Appwrite Storage.
 
-## Next Steps (Suggested)
+## Docs
 
-1) Add payment flow before order creation
-2) Implement order history screen
-3) Implement admin/staff protected section
-4) Add ETA calculation using `prep_time_min`
-
+- [`docs/prd.md`](docs/prd.md) — product requirements
+- [`docs/appwrite.md`](docs/appwrite.md) — collections schema + cloud functions spec
+- [`docs/status-tracking.md`](docs/status-tracking.md) — order status flow
+- [`CLAUDE.md`](CLAUDE.md) — architecture and codebase context for AI-assisted development

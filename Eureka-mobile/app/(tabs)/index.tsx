@@ -1,5 +1,5 @@
 import { Text, View, Dimensions, ScrollView, TouchableOpacity } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFonts, PlayfairDisplay_900Black } from "@expo-google-fonts/playfair-display";
 import { Feather } from "@expo/vector-icons"; // Icon for the timer
 import { router } from "expo-router";
@@ -22,13 +22,10 @@ const FONT_SIZE = Math.min(HEADER_HEIGHT * TEXT_SIZE_PCT, SCREEN_WIDTH * 0.65);
 
 // --- DEFAULT/FALLBACK DATA ---
 const fallbackOrderDetails = {
-  id: "#2847",
-  status: "ready",
-  time: "15 min",
-  items: [
-    { qty: 2, name: "Sliced Fish Soup (Clear)" },
-    { qty: 1, name: "Teh C" },
-  ],
+  id: "#-",
+  status: "Pending order",
+  time: "- min",
+  items: [],
 };
 
 const parseItemsSummary = (summary: string) =>
@@ -52,6 +49,7 @@ const statusTextMap: Record<typeof preparationSteps[number], string> = {
 
 export default function Index() {
   const [fontsLoaded] = useFonts({ PlayfairDisplay_900Black });
+  const insets = useSafeAreaInsets();
   const latestOrder = useOrdersStore((state) => state.recentOrders[0]);
 
   const orderDetails = latestOrder
@@ -65,6 +63,15 @@ export default function Index() {
       }
     : fallbackOrderDetails;
   const currentStatus = orderDetails.status;
+  const statusText =
+    preparationSteps.includes(currentStatus as (typeof preparationSteps)[number])
+      ? statusTextMap[currentStatus as (typeof preparationSteps)[number]]
+      : "Pending order";
+      const progressPct = preparationSteps.includes(currentStatus as (typeof preparationSteps)[number])
+    ? ((preparationSteps.indexOf(currentStatus as (typeof preparationSteps)[number]) + 1) /
+        preparationSteps.length) *
+      100
+    : 0;
 
   if (!fontsLoaded) return null;
 
@@ -72,7 +79,7 @@ export default function Index() {
     <View className="flex-1 bg-gray-50">
       <View 
         className="absolute w-[200%] h-[100%] bg-gray-50 rounded-full -left-[50%]" 
-        style={{ top: HEADER_HEIGHT }} 
+        style={{ top: HEADER_HEIGHT + insets.top }} 
       />
 
       {/* =================================================
@@ -80,7 +87,7 @@ export default function Index() {
       ================================================= */}
       <View 
         className="absolute top-0 left-0 right-0 items-center justify-center z-0"
-        style={{ height: HEADER_HEIGHT, top: -20 }}
+        style={{ height: HEADER_HEIGHT, top: insets.top }}
       >
         <Text 
           className="text-primary shadow-sm opacity-90"
@@ -102,9 +109,12 @@ export default function Index() {
       {/* =================================================
           LAYER 3: CONTENT (Order Card)
       ================================================= */}
-      <SafeAreaView className="flex-1" edges={['bottom']}>
+      <SafeAreaView className="flex-1" edges={['bottom', 'top']}>
         <ScrollView 
-          contentContainerStyle={{ flexGrow: 1, paddingTop: HEADER_HEIGHT - 60 }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingTop: HEADER_HEIGHT + insets.top - 60,
+          }}
           className="px-6 -mt-2"
           showsVerticalScrollIndicator={false}
         >
@@ -129,19 +139,25 @@ export default function Index() {
                 </View>
               </View>
               <Text className="text-orange-100 text-base font-medium mt-1">
-                {statusTextMap[currentStatus]}
+                {statusText}
               </Text>
             </View>
 
             {/* CARD BODY (Items) */}
             <View className="p-6 bg-white">
-              {orderDetails.items.map((item, index) => (
-                <View key={index} className="flex-row items-center mb-3">
-                  <Text className="text-gray-800 text-lg font-medium">
-                    {item.qty}x  {item.name}
-                  </Text>
+              {orderDetails.items.length === 0 ? (
+                <View className="flex-row items-center mb-3">
+                  <Text className="text-gray-800 text-lg font-medium">-</Text>
                 </View>
-              ))}
+              ) : (
+                orderDetails.items.map((item, index) => (
+                  <View key={index} className="flex-row items-center mb-3">
+                    <Text className="text-gray-800 text-lg font-medium">
+                      {item.qty}x  {item.name}
+                    </Text>
+                  </View>
+                ))
+              )}
 
               {/* DIVIDER */}
               <View className="h-[1px] bg-gray-100 my-6" />
@@ -171,14 +187,7 @@ export default function Index() {
                    */}
                   <View
                     className="h-full bg-orange-500 rounded-full"
-                    style={{
-                      width: `${Math.max(
-                        0,
-                        ((preparationSteps.indexOf(currentStatus) + 1) /
-                          preparationSteps.length) *
-                          100
-                      )}%`,
-                    }}
+                    style={{ width: `${Math.max(0, progressPct)}%` }}
                   />
                 </View>
               </View>

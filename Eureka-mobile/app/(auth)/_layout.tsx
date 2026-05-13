@@ -11,12 +11,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function AuthLayout() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
 
   // if (!isAuthReady) return null; // TODO: or a loading component/spinner
 
   if (isAuthenticated) {
-    return <Redirect href="/" />;
+    return <Redirect href={user?.role === "staff" ? "/staff" : "/"} />;
   }
   
 

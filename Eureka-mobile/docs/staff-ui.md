@@ -1,174 +1,102 @@
-# Staff/Chef UI and Flow
+# Staff UI (MVP)
 
-This document outlines a proposed staff-side UI structure and workflow for the Eureka system. It focuses on speed, clarity, and minimal taps in a busy kitchen environment.
-
----
-
-## Goals
-
-- Surface the right order at the right time with minimal searching.
-- Enable one-tap status updates.
-- Provide predictable handoff cues (order number, pickup time, and contents).
-- Make it hard to make mistakes (clear states, color coding, confirmation).
+This document defines the MVP staff UI behavior for live order tracking and status updates.
+Assume staff UI would be on a shared iPad in stall.
 
 ---
 
-## Primary Roles
-
-- **Chef/Kitchen**: monitors incoming orders and prep progress.
-- **Counter/Runner**: handles pickup and marks orders collected.
-- **Admin** (optional): can edit menu, promos, or view analytics.
-
----
-
-## Navigation Structure
-
-1) **Orders (default)**
-2) **Queue**
-3) **History**
-4) **Settings**
-
-Bottom tab nav or a side drawer depending on device size (tablet vs phone).
+## 1) Core Behavior
+- Live updates across multiple devices from a shared source of truth.
+- Landscape-only layout enforced for MVP.
+- Three status columns visible at once: received, preparing, ready.
+- Each column list is vertically scrollable.
+- New orders appear at the top of their column list.
+- Column headers include a count badge (example: received (7)).
+- Newly received orders show a "New" badge and a highlighted border; persists until another new order arrives.
 
 ---
 
-## Screen 1: Orders (Live)
+## 2) Layout Structure
+- Single screen with three columns: received, preparing, ready.
+- Column header row: status label + count badge.
+- Column body: scrollable list of compact order cards.
+- History strip: horizontal scroll of completed orders at the bottom (or side), newest inserted left-most.
 
-### Purpose
-Show all active orders and allow rapid status updates.
+### Column View (At-a-Glance)
+<table width="100%">
+  <thead>
+    <tr>
+      <th align="left">received (7)</th>
+      <th align="left">preparing (4)</th>
+      <th align="left">ready (2)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Order #1021</td>
+      <td>Order #1019</td>
+      <td>Order #1015</td>
+    </tr>
+    <tr>
+      <td>Order #1020</td>
+      <td>Order #1018</td>
+      <td>Order #1013</td>
+    </tr>
+    <tr>
+      <td>Order #1017</td>
+      <td>Order #1016</td>
+      <td>Order #1011</td>
+    </tr>
+  </tbody>
+</table>
 
-### Layout
-- Header: current time, store name, "New Orders" count.
-- Filters: status chips (Received, Preparing, Ready, Collected).
-- Main list: order cards sorted by expected ready time (or FIFO).
+---
 
-### Order Card Contents
-- Large order number (primary).
-- Time placed + elapsed time.
-- Status badge (color-coded).
+## 3) Order Card (Compact)
+- Order number (primary).
 - Item list with quantities.
-- Special requests highlighted.
-- Quick actions (single tap): "Start", "Ready", "Collected".
-
-### Actions
-- Tap card for detail view.
-- Swipe or tap buttons to change status.
+- Special requests surfaced inline.
+- Customer name.
+- Time label (status-aware, see below).
+- One primary action button.
 
 ---
 
-## Screen 2: Queue (Kitchen Focus)
-
-### Purpose
-Focused view for chefs with fewer distractions.
-
-### Layout
-- Two columns (on tablet) or segmented list (on phone):
-  - **To Cook** (Received)
-  - **In Progress** (Preparing)
-- Each card shows only essentials:
-  - Order number
-  - Item summary
-  - Prep time indicator (simple bar or minutes)
-
-### Actions
-- Tap "Start" to move to Preparing.
-- Tap "Ready" to move to Ready for pickup.
+## 4) Status Actions and Movement
+- received card action: "Start" -> move to preparing (insert at top).
+- preparing card action: "Ready" -> move to ready (insert at top).
+- ready card action: "Collected" -> remove from columns and add to History (insert left-most).
 
 ---
 
-## Screen 3: Order Detail
-
-### Purpose
-Full detail for complex orders.
-
-### Content
-- Order number, time, customer (optional), status.
-- Full item list with quantities and notes.
-- Promo applied (if any).
-- ETA and elapsed time.
-- Buttons: Start / Ready / Collected.
+## 5) Status Rules
+- Statuses shown in columns: received, preparing, ready.
+- "Collected" is a terminal action that removes the order from active columns and adds it to History.
+- Sorting within each column: `createdAt` DESC (newest first).
 
 ---
 
-## Screen 4: History
-
-### Purpose
-Reference for completed orders and audits.
-
-### Layout
-- Search by order number.
-- Filter by date or status.
-- Show time-to-prepare and time-to-collect.
+## 6) Time Labels (Per Status)
+- received: "Waiting X min" (time since entered queue/created).
+- preparing: "Cooking X min" (time since Start pressed).
+- ready: "Ready X min ago" (time since Ready pressed).
 
 ---
 
-## Screen 5: Settings (Admin)
+## 7) History
+### History Strip (On Main Screen)
+- Horizontal scroll of completed order cards.
+- Newest completed order inserted left-most.
+- Only show the last N completed orders (constant, default 20).
 
-### Purpose
-Operational settings and account.
-
-### Content
-- Staff accounts and roles.
-- Basic store settings.
-- Optional: menu and promo management links.
-
----
-
-## Status Flow (Core)
-
-1) **Received** (auto on order creation)
-2) **Preparing** (chef taps Start)
-3) **Ready** (chef taps Ready)
-4) **Collected** (runner taps Collected)
-
-Rules:
-- Received -> Preparing -> Ready -> Collected only (no backward).
-- Optional confirm dialog for Collected (to reduce mistakes).
+### History Screen (Full)
+- Separate screen to display all completed orders.
 
 ---
 
-## UI Design Principles
-
-- Large tap targets (>= 44px).
-- High contrast status colors:
-  - Received: amber
-  - Preparing: blue
-  - Ready: green
-  - Collected: gray
-- Minimal text; emphasize order numbers.
-- Continuous refresh with subtle "new order" pulse.
-
----
-
-## Notifications
-
-- New order sound / vibration for staff device.
-- Visual badge on Orders tab.
-- Optional "Ready" ping for runner.
-
----
-
-## Edge Cases
-
-- **Late orders**: highlight orders that exceed expected prep time.
-- **Special requests**: always visible in red or bold.
-- **Bulk orders**: group items by category for prep efficiency.
-
----
-
-## Metrics (Optional for Admin)
-
-- Average prep time
-- Orders per hour
-- Peak window alerts
-
----
-
-## Suggested User Flow (Summary)
-
-1) Staff opens app; lands on Orders tab.
-2) New order arrives in Received queue.
-3) Chef taps Start when cooking begins.
-4) Chef taps Ready when complete.
-5) Runner marks Collected at pickup.
-6) Order moves to History automatically.
+## 8) Snackbar Feedback (Future)
+- After tapping a status action, show a top snackbar.
+- Auto-dismiss after a timeout (constant, default 10 seconds).
+- Snackbar actions: [undo] and [dismiss].
+- Snackbar does not block the workflow.
+- Undo reverts the order status immediately to the previous value.

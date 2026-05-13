@@ -372,7 +372,7 @@ const Cart = () => {
     orderNumber,
     dateLabel: formatDateLabel(new Date().toISOString()),
     total: totalCents / 100,
-    status: "paid" as const,
+    status: "received" as const,
     itemsSummary: items.length
       ? items.map((item) => `${item.quantity}x ${item.name}`).join(", ")
       : "Items unavailable",
@@ -443,7 +443,7 @@ const Cart = () => {
         throw new Error(presentResult.error.message);
       }
 
-      // Confirm payment on the server to update order status to paid.
+      // Confirm payment on the server to update order status to received.
       const confirmation = await confirmCheckoutPayment({
         userId,
         orderId: checkout.orderId,
