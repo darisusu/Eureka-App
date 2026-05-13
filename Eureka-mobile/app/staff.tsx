@@ -1,5 +1,10 @@
 import CustomButton from "@/components/CustomButton";
-import { getActiveOrders, getCollectedOrders, signOut } from "@/lib/appwrite";
+import {
+  getActiveOrders,
+  getCollectedOrders,
+  signOut,
+  updateOrderStatus,
+} from "@/lib/appwrite";
 import useAuthStore from "@/store/auth.store";
 import type { StaffOrder } from "@/type";
 import { router } from "expo-router";
@@ -42,68 +47,68 @@ export default function StaffScreen() {
     };
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadOrders = async () => {
-      try {
-        const data = await getActiveOrders();
-        if (isMounted) {
-          setOrders(data);
-          setOrdersError(null);
-        }
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Failed to load orders.";
-        if (isMounted) {
-          setOrdersError(message);
-        }
-      } finally {
-        if (isMounted) {
-          setIsOrdersLoading(false);
-        }
+  const fetchActiveOrders = async (isMounted: { current: boolean }) => {
+    try {
+      const data = await getActiveOrders();
+      if (isMounted.current) {
+        setOrders(data);
+        setOrdersError(null);
       }
-    };
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to load orders.";
+      if (isMounted.current) {
+        setOrdersError(message);
+      }
+    } finally {
+      if (isMounted.current) {
+        setIsOrdersLoading(false);
+      }
+    }
+  };
 
-    void loadOrders();
-    const interval = setInterval(loadOrders, 10000);
+  const fetchHistoryOrders = async (isMounted: { current: boolean }) => {
+    try {
+      const data = await getCollectedOrders();
+      if (isMounted.current) {
+        setHistoryOrders(data);
+        setHistoryError(null);
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to load order history.";
+      if (isMounted.current) {
+        setHistoryError(message);
+      }
+    } finally {
+      if (isMounted.current) {
+        setIsHistoryLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const isMounted = { current: true };
+
+    void fetchActiveOrders(isMounted);
+    const interval = setInterval(() => fetchActiveOrders(isMounted), 10000);
 
     return () => {
-      isMounted = false;
+      isMounted.current = false;
       clearInterval(interval);
     };
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
+    const isMounted = { current: true };
 
-    const loadHistory = async () => {
-      try {
-        const data = await getCollectedOrders();
-        if (isMounted) {
-          setHistoryOrders(data);
-          setHistoryError(null);
-        }
-      } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Failed to load order history.";
-        if (isMounted) {
-          setHistoryError(message);
-        }
-      } finally {
-        if (isMounted) {
-          setIsHistoryLoading(false);
-        }
-      }
-    };
-
-    void loadHistory();
-    const interval = setInterval(loadHistory, 15000);
+    void fetchHistoryOrders(isMounted);
+    const interval = setInterval(() => fetchHistoryOrders(isMounted), 15000);
 
     return () => {
-      isMounted = false;
+      isMounted.current = false;
       clearInterval(interval);
     };
   }, []);
@@ -116,12 +121,58 @@ export default function StaffScreen() {
       Math.floor((Date.now() - new Date(reference).getTime()) / 60000)
     );
     if (order.status === "received") {
-      return `Waiting ${minutes} min`;
+      return `Received ${minutes} min ago`;
     }
     if (order.status === "preparing") {
-      return `Cooking ${minutes} min`;
+      return `Preping ${minutes} min`;
     }
     return `Ready ${minutes} min ago`;
+  };
+
+  const handleOrderAction = async (order: StaffOrder) => {
+    const nextStatusMap: Record<StaffOrder["status"], StaffOrder["status"]> = {
+      received: "preparing",
+      preparing: "ready",
+      ready: "collected",
+      pending_payment: "received",
+      paid: "received",
+      collected: "collected",
+    };
+    const nextStatus = nextStatusMap[order.status];
+    if (!nextStatus || nextStatus === order.status) {
+      return;
+    }
+
+    const updatedOrder: StaffOrder = {
+      ...order,
+      status: nextStatus,
+      updatedAt: new Date().toISOString(),
+    };
+
+    setOrders((prev) => {
+      const filtered = prev.filter((item) => item.orderId !== order.orderId);
+      if (nextStatus === "collected") {
+        return filtered;
+      }
+      return [updatedOrder, ...filtered];
+    });
+
+    if (nextStatus === "collected") {
+      setHistoryOrders((prev) => [updatedOrder, ...prev]);
+    }
+
+    try {
+      await updateOrderStatus({ orderId: order.orderId, status: nextStatus });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to update order status.";
+      Alert.alert("Order update", message);
+      const isMounted = { current: true };
+      void fetchActiveOrders(isMounted);
+      void fetchHistoryOrders(isMounted);
+    }
   };
 
   const handleSignOut = async () => {
@@ -285,7 +336,7 @@ export default function StaffScreen() {
                           <TouchableOpacity
                             className="mt-4 bg-black rounded-full px-4 py-2 self-start"
                             activeOpacity={0.8}
-                            onPress={() => {}}
+                            onPress={() => handleOrderAction(order)}
                           >
                             <Text className="text-xs font-bold text-white">
                               {column.actionLabel}

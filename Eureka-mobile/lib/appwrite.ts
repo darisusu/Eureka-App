@@ -11,6 +11,7 @@ import type {
     PromoCode,
     SignInParams,
     StaffOrder,
+    OrderStatus,
     User,
 } from "@/type";
 import { Account, AppwriteException, Avatars, Client, Databases, Functions, ID, Query, Storage } from "react-native-appwrite";
@@ -560,6 +561,25 @@ export const getCollectedOrders = async (): Promise<StaffOrder[]> => {
       items: itemsSummary,
     };
   });
+};
+
+export const updateOrderStatus = async ({
+  orderId,
+  status,
+}: {
+  orderId: string;
+  status: OrderStatus;
+}) => {
+  if (!orderId) {
+    throw new Error("orderId is required.");
+  }
+
+  await databases.updateDocument(
+    appwriteConfig.databaseId,
+    appwriteConfig.ordersCollectionId,
+    orderId,
+    { status }
+  );
 };
 
 // get PromoCode Object by codeUpper
