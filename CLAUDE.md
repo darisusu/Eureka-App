@@ -83,7 +83,8 @@ Standard Appwrite Auth: `account.create()` registers an account, `account.create
 - Stripe webhook: `/api/webhooks/stripe` handles `payment_intent.succeeded` as fallback if customer closes browser before redirect
 - Post-payment confirmation: `/api/create-checkout` with `action: "confirm"` verifies PaymentIntent, sets order to `"received"`, returns `readyAt` from `order_dept_slots`
 - Cart ETA: dynamically fetched from `dept_config.max_wait_minutes` for the categories in the current cart
-- Customer order tracking: home screen polls Supabase every 10 s; shows estimated ready time and switches to a "ready for collection" card when staff marks the order ready — no progress bar shown to customers
+- Navigation: middleware redirects `/` → `/search`; bottom tab bar (Menu / Cart / Profile) — no Home tab; no desktop nav
+- Customer order tracking: **removed from the customer UI**; the home screen (`/`) is no longer customer-facing (redirects to `/search`)
 - Profile screen: displays name and phone, shows up to 3 recent orders fetched from Supabase on load
 - Staff dashboard: three-column kanban (Received / Preparing / Ready); role-gated (redirects non-staff); optimistic status updates with error rollback; polls every 10 s for active orders and every 15 s for history; "Cooking X min" timer uses `updated_at`; History tab; Settings tab with sign-out
 

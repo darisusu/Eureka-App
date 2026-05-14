@@ -66,4 +66,4 @@ No Supabase Auth session. Users are plain rows in the `users` table:
 - Server-side API routes (`/api/*`) use `SUPABASE_SECRET_KEY` to bypass RLS. Never use this key client-side.
 - Cart is **not** persisted (lost on refresh). Orders store IS persisted (last 3 orders kept in localStorage).
 - Staff dashboard polls every 10 s (active orders) and 15 s (history). No Supabase Realtime.
-- Customer home polls every 10 s for order status; shows "ready for collection" card when status reaches `"ready"`.
+- `/` redirects to `/search` (middleware). The customer landing screen is the menu.
