@@ -6,7 +6,7 @@ import { Plus, X } from "lucide-react";
 import { useState } from "react";
 
 const MenuCard = ({
-  item: { id, image_url, name, price, description },
+  item: { id, image_url, name, price, description, category_id },
 }: {
   item: MenuItem;
 }) => {
@@ -26,6 +26,7 @@ const MenuCard = ({
       price,
       image_url: image_url ?? "",
       specialRequest: specialRequest.trim() || undefined,
+      categoryId: category_id ?? undefined,
     });
     setIsModalVisible(false);
     setSpecialRequest("");

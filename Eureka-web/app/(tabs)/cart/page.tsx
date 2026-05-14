@@ -2,7 +2,7 @@
 
 import CartItem from "@/components/CartItem";
 import CustomButton from "@/components/CustomButton";
-import { calculateCartTotals, createCheckout } from "@/lib/supabase";
+import { calculateCartTotals, createCheckout, getDeptConfig } from "@/lib/supabase";
 import useAuthStore from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
 import useOrdersStore from "@/store/orders.store";
@@ -240,6 +240,10 @@ export default function Cart() {
     totalCents: 0,
   });
   const [hasServerTotals, setHasServerTotals] = useState(false);
+  const [estimatedTime, setEstimatedTime] = useState<EstimatedTime>({
+    range: "20-30 min",
+    note: "Based on current kitchen load",
+  });
 
   // Stripe checkout state
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -312,6 +316,16 @@ export default function Cart() {
   useEffect(() => {
     void refreshTotals();
   }, [items, user?.id]);
+
+  useEffect(() => {
+    const categoryIds = [...new Set(items.map((i) => i.categoryId).filter(Boolean))] as string[];
+    if (!categoryIds.length) return;
+    getDeptConfig(categoryIds).then((configs) => {
+      if (!configs.length) return;
+      const max = Math.max(...configs.map((c) => c.maxWaitMinutes));
+      setEstimatedTime({ range: `${max} min`, note: "Based on current kitchen load" });
+    }).catch(() => undefined);
+  }, [items]);
 
   const handleApplyPromo = async () => {
     if (totalItems === 0) {
@@ -388,6 +402,7 @@ export default function Cart() {
           itemsSummary: items.length
             ? items.map((i) => `${i.quantity}x ${i.name}`).join(", ")
             : "Items unavailable",
+          readyAt: checkout.readyAt,
         });
         clearCart();
         toast.success(`Order placed! Your order number is ${checkout.orderNumber}.`);
@@ -434,11 +449,6 @@ export default function Cart() {
     setPendingCheckout(null);
     toast.success(`Payment successful! Order ${orderNumber} placed.`);
     router.replace("/");
-  };
-
-  const estimatedTime: EstimatedTime = {
-    range: "20-30 min",
-    note: "Based on current kitchen load",
   };
 
   return (

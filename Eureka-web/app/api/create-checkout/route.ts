@@ -11,6 +11,34 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: "2026-04-22.dahlia",
 });
 
+const populateDeptSlots = async (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    supabaseClient: any,
+    orderId: string,
+    categoryIds: string[]
+): Promise<string | null> => {
+    const slots: { order_id: string; category_id: string; dept_ready_at: string }[] = [];
+
+    for (const categoryId of categoryIds) {
+        const { data: readyAt } = await supabaseClient
+            .rpc("calculate_dept_ready_at", { p_category_id: categoryId });
+        if (readyAt) {
+            slots.push({ order_id: orderId, category_id: categoryId, dept_ready_at: readyAt as string });
+        }
+    }
+
+    if (!slots.length) return null;
+
+    await supabaseClient.from("order_dept_slots").insert(slots);
+
+    const maxReadyAt = slots.reduce(
+        (max, s) => (s.dept_ready_at > max ? s.dept_ready_at : max),
+        slots[0].dept_ready_at
+    );
+    await supabaseClient.from("orders").update({ ready_at: maxReadyAt }).eq("id", orderId);
+    return maxReadyAt;
+};
+
 const normalizeRequest = (value: unknown): string | undefined => {
     if (typeof value !== "string") return undefined;
     const trimmed = value.trim();
@@ -61,16 +89,27 @@ export async function POST(req: NextRequest) {
                     .select("id", { count: "exact", head: true })
                     .eq("order_id", orderId);
                 if ((count ?? 0) === 0) {
-                    await supabase.from("promo_redemptions").insert({
+                    const { error: promoInsertErr } = await supabase.from("promo_redemptions").insert({
                         promo_id: order.promo_id,
                         user_id: order.user_id,
                         order_id: orderId,
                         discount_cents: order.discount_cents,
                     });
+                    if (promoInsertErr?.code === "23505") {
+                        // already redeemed by concurrent request — treat as success
+                    }
                 }
             }
 
-            return NextResponse.json({ ok: true, data: { orderId, status: "received", isPaid: true } });
+            const { data: slotData } = await supabase
+                .from("order_dept_slots")
+                .select("dept_ready_at")
+                .eq("order_id", orderId);
+            const readyAt = slotData?.length
+                ? slotData.reduce((max, r) => (r.dept_ready_at > max ? r.dept_ready_at : max), slotData[0].dept_ready_at)
+                : undefined;
+
+            return NextResponse.json({ ok: true, data: { orderId, status: "received", isPaid: true, readyAt } });
         }
 
         // ── Create path ────────────────────────────────────────────────────────
@@ -84,12 +123,12 @@ export async function POST(req: NextRequest) {
         const menuIds = [...new Set(items.map(i => i.menuId).filter(Boolean))] as string[];
         const { data: menuRows, error: menuError } = await supabase
             .from("menu")
-            .select("id, name, price")
+            .select("id, name, price, category_id")
             .in("id", menuIds);
 
         if (menuError) return NextResponse.json({ ok: false, message: "Failed to fetch menu." }, { status: 500 });
 
-        const menuById = new Map((menuRows ?? []).map(m => [m.id, { price: Number(m.price), name: String(m.name) }]));
+        const menuById = new Map((menuRows ?? []).map(m => [m.id, { price: Number(m.price), name: String(m.name), categoryId: m.category_id as string | null }]));
 
         let subtotalCents = 0;
         for (const item of items) {
@@ -149,9 +188,12 @@ export async function POST(req: NextRequest) {
                     price: menu.price,
                     qty: Number(item.quantity),
                     special_request: normalizeRequest(item.specialRequest),
+                    categoryId: menu.categoryId,
                 };
             })
-            .filter(Boolean) as { menu_id: string; name: string; price: number; qty: number; special_request?: string }[];
+            .filter(Boolean) as { menu_id: string; name: string; price: number; qty: number; special_request?: string; categoryId: string | null }[];
+
+        const uniqueCategoryIds = [...new Set(orderItemsPayload.map(i => i.categoryId).filter(Boolean))] as string[];
 
         // ── Free order — no Stripe step ────────────────────────────────────────
         if (totalCents === 0) {
@@ -171,18 +213,22 @@ export async function POST(req: NextRequest) {
 
             if (insertErr || !orderDoc) return NextResponse.json({ ok: false, message: "Failed to create order." }, { status: 500 });
 
-            await supabase.from("order_items").insert(
-                orderItemsPayload.map(i => ({ ...i, order_id: orderDoc.id }))
-            );
+            const itemsForInsert = orderItemsPayload.map(({ categoryId: _c, ...i }) => ({ ...i, order_id: orderDoc.id }));
+            await supabase.from("order_items").insert(itemsForInsert);
 
             if (promo) {
-                await supabase.from("promo_redemptions").insert({
+                const { error: promoInsertErr } = await supabase.from("promo_redemptions").insert({
                     promo_id: promo.promoId,
                     user_id: userId,
                     order_id: orderDoc.id,
                     discount_cents: promo.discountCents,
                 });
+                if (promoInsertErr?.code === "23505") {
+                    return NextResponse.json({ ok: false, message: "Promo code already used." }, { status: 400 });
+                }
             }
+
+            const readyAt = await populateDeptSlots(supabase, orderDoc.id, uniqueCategoryIds).catch(() => null);
 
             return NextResponse.json({
                 ok: true,
@@ -196,6 +242,7 @@ export async function POST(req: NextRequest) {
                     discountCents,
                     totalCents,
                     promo,
+                    readyAt: readyAt ?? undefined,
                 },
             });
         }
@@ -228,9 +275,10 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ ok: false, message: "Failed to create order." }, { status: 500 });
         }
 
-        await supabase.from("order_items").insert(
-            orderItemsPayload.map(i => ({ ...i, order_id: orderDoc.id }))
-        );
+        const itemsForInsert = orderItemsPayload.map(({ categoryId: _c, ...i }) => ({ ...i, order_id: orderDoc.id }));
+        await supabase.from("order_items").insert(itemsForInsert);
+
+        const readyAt = await populateDeptSlots(supabase, orderDoc.id, uniqueCategoryIds).catch(() => null);
 
         return NextResponse.json({
             ok: true,
@@ -244,6 +292,7 @@ export async function POST(req: NextRequest) {
                 discountCents,
                 totalCents,
                 promo,
+                readyAt: readyAt ?? undefined,
             },
         });
     } catch (err) {

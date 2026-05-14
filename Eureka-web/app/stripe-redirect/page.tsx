@@ -56,6 +56,7 @@ function StripeRedirectInner() {
           itemsSummary: items.length
             ? items.map((i) => `${i.quantity}x ${i.name}`).join(", ")
             : "Items unavailable",
+          readyAt: confirmation.readyAt,
         });
         clearCart();
         setStatus("success");
