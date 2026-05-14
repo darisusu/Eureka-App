@@ -2,7 +2,6 @@
 
 import CustomButton from "@/components/CustomButton";
 import CustomInput from "@/components/CustomInput";
-import { createUser } from "@/lib/appwrite";
 import useAuthStore from "@/store/auth.store";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -11,25 +10,24 @@ import toast from "react-hot-toast";
 
 export default function SignUp() {
   const router = useRouter();
-  const { fetchAuthenticatedUser } = useAuthStore();
+  const { signUp } = useAuthStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [form, setForm] = useState({ name: "", phone: "" });
 
   const submit = async () => {
-    const { name, email, password } = form;
+    const { name, phone } = form;
 
-    if (!name || !email || !password) {
-      toast.error("Please enter name, email and password.");
+    if (!name.trim() || !phone.trim()) {
+      toast.error("Please enter your name and phone number.");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await createUser({ name, email, password });
-      const user = await fetchAuthenticatedUser();
-      router.replace(user?.role === "staff" ? "/staff" : "/");
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Sign up failed.");
+      await signUp(name, phone);
+      router.replace("/");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -45,27 +43,17 @@ export default function SignUp() {
       />
 
       <CustomInput
-        label="Email"
-        placeholder="Enter your email"
-        value={form.email}
-        type="email"
-        onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-      />
-
-      <CustomInput
-        label="Password"
-        placeholder="Enter your password"
-        value={form.password}
-        type="password"
-        onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
+        label="Phone number"
+        placeholder="Enter your phone number"
+        value={form.phone}
+        type="tel"
+        onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
       />
 
       <CustomButton title="Sign Up" isLoading={isSubmitting} onClick={submit} />
 
       <div className="flex justify-center flex-row gap-2 px-1">
-        <span className="base-regular text-gray-100">
-          Already have an account?
-        </span>
+        <span className="base-regular text-gray-100">Already have an account?</span>
         <Link href="/sign-in" className="base-bold text-primary">
           Sign In
         </Link>
