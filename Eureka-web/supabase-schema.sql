@@ -216,3 +216,26 @@ BEGIN
   RETURN v_result;
 END;
 $$ LANGUAGE plpgsql;
+
+
+
+
+
+-- Add updated_at to orders (powers the staff "Cooking X min" timer)
+  ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+  CREATE OR REPLACE FUNCTION set_updated_at()
+  RETURNS TRIGGER AS $$
+  BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+  END;
+  $$ LANGUAGE plpgsql;
+
+  CREATE TRIGGER trg_orders_updated_at
+    BEFORE UPDATE ON orders
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+  -- Prevent promo double-redemption under concurrent requests
+  ALTER TABLE promo_redemptions
+    ADD CONSTRAINT uq_promo_user UNIQUE (promo_id, user_id);
