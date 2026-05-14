@@ -3,7 +3,7 @@
 import Filter from "@/components/Filter";
 import MenuCard from "@/components/MenuCard";
 import SearchBar from "@/components/SearchBar";
-import { getCategories, getMenu } from "@/lib/supabase";
+import { getCategories, getDeptConfig, getMenu } from "@/lib/supabase";
 import type { Category, MenuItem } from "@/type";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -16,11 +16,22 @@ function SearchInner() {
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [maxWait, setMaxWait] = useState<number | null>(null);
 
   useEffect(() => {
-    getCategories()
-      .then((data) => setCategories(data as Category[]))
-      .catch(() => null);
+    getCategories().then((data) => {
+      setCategories(data as Category[]);
+      const ids = (data as Category[]).map((c) => c.id);
+      if (ids.length) {
+        getDeptConfig(ids)
+          .then((configs) => {
+            if (configs.length) {
+              setMaxWait(Math.max(...configs.map((c) => c.maxWaitMinutes)));
+            }
+          })
+          .catch(() => null);
+      }
+    }).catch(() => null);
   }, []);
 
   useEffect(() => {
@@ -39,7 +50,10 @@ function SearchInner() {
             <div className="flex-1 bg-white border border-gray-200 rounded-2xl px-5 py-3">
               <p className="paragraph-regular text-gray-200">
                 Estimated time{" "}
-                <span className="paragraph-bold text-primary">20</span> min
+                <span className="paragraph-bold text-primary">
+                  {maxWait != null ? maxWait : "—"}
+                </span>{" "}
+                min
               </p>
             </div>
           </div>
