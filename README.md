@@ -12,17 +12,42 @@ Eureka is a grab-and-go pre-order and prepay platform for high-volume food stall
 
 ```
 Eureka-App/
-├── Eureka-mobile/   Expo + React Native app (iOS & Android)
-└── Eureka-web/      Next.js web app
+├── Eureka-mobile/   Expo + React Native app (iOS & Android) — Appwrite backend
+└── Eureka-web/      Next.js web app — Supabase backend
 ```
 
-Both apps share the same Appwrite backend and Stripe integration.
+> **Active development:** `Eureka-web` only. The two apps no longer share a backend.
 
 ---
 
-## Eureka-mobile
+## Eureka-web (active)
 
-React Native app built with Expo. Covers the full customer flow (browse → cart → pay) and a role-gated staff order dashboard.
+Next.js web app covering the full customer flow and staff dashboard.
+
+**Stack:** Next.js · Tailwind CSS v4 · Zustand · Supabase · Stripe
+
+**Features:**
+- Phone-number sign-in (no password); staff sign-in requires PIN
+- Menu browsing with search and category filters
+- Cart with special requests and promo code redemption
+- Stripe payment via `<PaymentElement>` modal; webhook fallback for out-of-band confirmation
+- Queue-aware ETA: checkout populates `order_dept_slots` via the `calculate_dept_ready_at` DB function
+- Customer home: shows estimated wait time, switches to "ready for collection" card when staff marks order ready
+- Staff kanban dashboard (Received → Preparing → Ready → Collected) with live polling
+
+```bash
+cd Eureka-web
+npm install
+npm run dev
+```
+
+Copy `.env.local.example` to `.env.local` and fill in the required variables (see [Eureka-web/README.md](Eureka-web/README.md)).
+
+---
+
+## Eureka-mobile (legacy)
+
+React Native app built with Expo. Original version of the product; uses Appwrite for backend.
 
 **Stack:** Expo · React Native · Expo Router · NativeWind · Zustand · Appwrite · Stripe
 
@@ -32,33 +57,15 @@ npm install
 npx expo start
 ```
 
-See [`Eureka-mobile/README.md`](Eureka-mobile/README.md) for setup details and docs references.
+See [`Eureka-mobile/README.md`](Eureka-mobile/README.md) for setup details.
 
 ---
 
-## Eureka-web
+## Backends
 
-Next.js web version of the Eureka frontend. Mirrors the mobile app's screens and connects to the same Appwrite backend.
+| App | Backend | Auth |
+|---|---|---|
+| `Eureka-web` | [Supabase](https://supabase.com) — schema in `Eureka-web/supabase-schema.sql` | Phone lookup (plain DB row, no Supabase Auth) |
+| `Eureka-mobile` | [Appwrite](https://appwrite.io) (Singapore) | Email + password via Appwrite Auth |
 
-**Stack:** Next.js · Tailwind CSS · Zustand · Appwrite
-
-```bash
-cd Eureka-web
-npm install
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
----
-
-## Backend
-
-Both apps use a shared [Appwrite](https://appwrite.io) project for auth, database, storage, and cloud functions, and [Stripe](https://stripe.com) for payments.
-
-Cloud functions live in `Eureka-mobile/functions/`:
-- `calculate-cart` — validates cart and applies promo codes server-side
-- `create-checkout` — creates the order and Stripe PaymentIntent
-- `stripe-webhook` — reconciles payment status from Stripe events
-
-See [`Eureka-mobile/docs/appwrite.md`](Eureka-mobile/docs/appwrite.md) for the full schema and environment variable reference.
+Both apps use [Stripe](https://stripe.com) for payments (SGD, PaymentIntent flow).

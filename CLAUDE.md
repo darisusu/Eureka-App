@@ -48,7 +48,9 @@ Eureka-App/
 | Route | Purpose |
 |---|---|
 | `POST /api/calculate-cart` | Validates cart against live menu prices, applies promo codes server-side |
-| `POST /api/create-checkout` | `action: "create"` — creates order + Stripe PaymentIntent; `action: "confirm"` — verifies payment, marks order received |
+| `POST /api/create-checkout` | `action: "create"` — creates order + Stripe PaymentIntent + `order_dept_slots`; `action: "confirm"` — verifies payment, marks order received, returns `readyAt` |
+| `POST /api/webhooks/stripe` | Stripe webhook — handles `payment_intent.succeeded` / `payment_intent.payment_failed` as fallback for out-of-band confirmations |
+| `POST /api/verify-pin` | Validates staff PIN against `pin_hash` during sign-in |
 
 ---
 
@@ -72,16 +74,18 @@ Standard Appwrite Auth: `account.create()` registers an account, `account.create
 ## What Is Currently Implemented and Working
 
 ### Web (`Eureka-web`)
-- Sign-up and sign-in flows (phone-only, with role-based redirect)
+- Sign-up and sign-in flows (phone-only, with role-based redirect); staff sign-in requires PIN
 - Menu browsing: text search (ilike), filter by category_id
-- Cart: add/remove/increase/decrease qty; same item with different `specialRequest` values becomes a separate line item
-- Promo code redemption: validated server-side via `/api/calculate-cart`; `PERCENT` and `FIXED` types, per-user usage limit, min subtotal, max discount cap
-- Checkout: `/api/create-checkout` creates order + Stripe PaymentIntent; if `totalCents === 0` order is marked received immediately
+- Cart: add/remove/increase/decrease qty; same item with different `specialRequest` values becomes a separate line item; `categoryId` stored per item for ETA calculation
+- Promo code redemption: validated server-side via `/api/calculate-cart`; `PERCENT` and `FIXED` types, per-user usage limit, min subtotal, max discount cap; race condition protected by `UNIQUE(promo_id, user_id)` DB constraint
+- Checkout: `/api/create-checkout` creates order + Stripe PaymentIntent + `order_dept_slots` (via `calculate_dept_ready_at` RPC); if `totalCents === 0` order is marked received immediately; returns `readyAt`
 - Stripe payment: `<PaymentElement>` in a modal overlay, redirects through `/stripe-redirect` on completion
-- Post-payment confirmation: `/api/create-checkout` with `action: "confirm"` verifies PaymentIntent and sets order status to `"received"`
-- Order status tracking: home screen reads from Zustand `recentOrders` (static — does not poll)
+- Stripe webhook: `/api/webhooks/stripe` handles `payment_intent.succeeded` as fallback if customer closes browser before redirect
+- Post-payment confirmation: `/api/create-checkout` with `action: "confirm"` verifies PaymentIntent, sets order to `"received"`, returns `readyAt` from `order_dept_slots`
+- Cart ETA: dynamically fetched from `dept_config.max_wait_minutes` for the categories in the current cart
+- Customer order tracking: home screen polls Supabase every 10 s; shows estimated ready time and switches to a "ready for collection" card when staff marks the order ready — no progress bar shown to customers
 - Profile screen: displays name and phone, shows up to 3 recent orders fetched from Supabase on load
-- Staff dashboard: three-column kanban (Received / Preparing / Ready); optimistic status updates with error rollback; polls every 10 s for active orders and every 15 s for history; History tab; Settings tab with sign-out
+- Staff dashboard: three-column kanban (Received / Preparing / Ready); role-gated (redirects non-staff); optimistic status updates with error rollback; polls every 10 s for active orders and every 15 s for history; "Cooking X min" timer uses `updated_at`; History tab; Settings tab with sign-out
 
 ---
 
@@ -101,9 +105,9 @@ Schema source: `Eureka-web/supabase-schema.sql`
 | `promo_codes` | `id`, `code_upper` (unique), `is_active`, `type` ("PERCENT"\|"FIXED"), `value`, `max_discount_cents`, `min_subtotal_cents`, `usage_limit_per_user` |
 | `promo_redemptions` | `id`, `promo_id` (fk), `user_id` (fk), `order_id` (fk), `redeemed_at`, `discount_cents` |
 
-**Order status flow:** `pending_payment` → `received` → `preparing` → `ready` → `collected`
+**Order status flow:** `pending_payment` → `received` → `preparing` → `ready` → `collected` (also `cancelled` — set manually via Supabase console only, no customer-facing cancel UI)
 
-**Note:** `orders` has no `updated_at` column. The staff screen's "Cooking X min" timer uses `created_at` as a fallback after a page refresh — timing will only be accurate for the session in which status was changed. Consider adding `updated_at` with an auto-update trigger.
+**`orders.updated_at`** is present in the schema with an auto-update trigger (`trg_orders_updated_at`). If the column is missing from an existing DB, run: `ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();`
 
 ---
 
@@ -121,26 +125,20 @@ SUPABASE_SECRET_KEY
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 STRIPE_SECRET_KEY
 
+# Stripe webhook signing secret — from Stripe Dashboard → Developers → Webhooks
+STRIPE_WEBHOOK_SECRET
+
 # Optional (defaults to "sgd")
 STRIPE_CURRENCY
 ```
 
 ---
 
-## What Is Partially Done
-
-- **Home screen order status**: reads from Zustand (`recentOrders[0]`), shows a static progress bar. Does **not** poll Supabase for live status updates.
-- **Estimated prep time**: hardcoded as "20-30 min"; not calculated from `dept_config` / `order_dept_slots`.
-- **`dept_config` / `order_dept_slots`**: schema is in place but web checkout doesn't populate `order_dept_slots` yet.
-
----
-
 ## What Is Not Yet Built
 
-- Live order status updates to the customer (Supabase Realtime subscription or polling on home screen)
-- Dynamic ETA using `dept_config` queue math and `order_dept_slots`
-- Stripe webhook handler
 - Delivery, dine-in table management, in-store POS, inventory management (explicit non-goals for MVP)
+- RLS policies on Supabase tables (currently mitigated by API routes always using service role key; see `supabase-schema.sql` for recommended policies)
+- `orders.ready_at` is populated from `order_dept_slots` but not surfaced separately to the customer beyond the ETA label
 
 ---
 
@@ -154,7 +152,9 @@ STRIPE_CURRENCY
 
 **Monetary unit boundary.** API routes and promo logic use cents (integers). `orders.total` and `menu.price` are stored as dollars (`NUMERIC(10,2)`). Convert at the boundary: `cents = Math.round(dollars * 100)`.
 
-**Promo validation is server-side authoritative.** `validatePromoCode()` in `lib/supabase.ts` is a client-side preview only. The actual enforcement is in `/api/calculate-cart` and `/api/create-checkout`.
+**Promo validation is server-side authoritative.** `validatePromoCode()` in `lib/supabase.ts` is a client-side preview only. The actual enforcement is in `/api/calculate-cart` and `/api/create-checkout`. A `UNIQUE(promo_id, user_id)` constraint on `promo_redemptions` prevents double-redemption under concurrent requests; the API routes catch Postgres error `23505` and return a friendly error.
+
+**Customer order UX is intentionally minimal.** Customers see estimated wait time and a "ready for collection" banner — no intermediate status steps. No cancel button is exposed to customers; orders can only be cancelled by editing the DB directly.
 
 **Staff polling, not Realtime.** Web polls Supabase every 10 s for active orders and every 15 s for history.
 

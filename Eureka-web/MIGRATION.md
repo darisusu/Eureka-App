@@ -2,6 +2,8 @@
 
 Eureka started as an Expo + React Native app (`Eureka-mobile`) and was ported to a Next.js web app (`Eureka-web`). This document summarises what changed, what stayed the same, and what was dropped.
 
+> **Note:** After the initial port, `Eureka-web` migrated from Appwrite to **Supabase** as its backend, and from Appwrite Cloud Functions to **Next.js API routes**. The "What Was Retained" section below reflects the initial port state; see `supabase-schema.sql` and `README.md` for the current web architecture.
+
 ---
 
 ## What Changed
