@@ -197,7 +197,7 @@ export const getOrderStatus = async (orderId: string): Promise<OrderStatus | nul
 export const getActiveOrders = async (): Promise<StaffOrder[]> => {
     const { data: orders, error } = await supabase
         .from("orders")
-        .select("id, status, order_number, created_at, users(name), order_items(id, name, qty, special_request)")
+        .select("id, status, order_number, created_at, updated_at, users(name), order_items(id, name, qty, special_request)")
         .eq("is_paid", true)
         .in("status", ["received", "preparing", "ready"])
         .order("created_at", { ascending: false })
@@ -210,7 +210,7 @@ export const getActiveOrders = async (): Promise<StaffOrder[]> => {
         orderNumber: String(order.order_number),
         status: order.status as OrderStatus,
         createdAt: order.created_at,
-        updatedAt: order.created_at,
+        updatedAt: (order as { updated_at?: string }).updated_at ?? order.created_at,
         userName: (order.users as { name?: string } | null)?.name ?? "—",
         items: ((order.order_items as { name: string; qty: number; special_request?: string }[]) ?? []).map(i => ({
             name: i.name,
@@ -223,7 +223,7 @@ export const getActiveOrders = async (): Promise<StaffOrder[]> => {
 export const getCollectedOrders = async (): Promise<StaffOrder[]> => {
     const { data: orders, error } = await supabase
         .from("orders")
-        .select("id, status, order_number, created_at, users(name), order_items(id, name, qty, special_request)")
+        .select("id, status, order_number, created_at, updated_at, users(name), order_items(id, name, qty, special_request)")
         .eq("is_paid", true)
         .eq("status", "collected")
         .order("created_at", { ascending: false })
@@ -236,7 +236,7 @@ export const getCollectedOrders = async (): Promise<StaffOrder[]> => {
         orderNumber: String(order.order_number),
         status: order.status as OrderStatus,
         createdAt: order.created_at,
-        updatedAt: order.created_at,
+        updatedAt: (order as { updated_at?: string }).updated_at ?? order.created_at,
         userName: (order.users as { name?: string } | null)?.name ?? "—",
         items: ((order.order_items as { name: string; qty: number; special_request?: string }[]) ?? []).map(i => ({
             name: i.name,
@@ -286,6 +286,26 @@ const calculatePromoDiscount = (promo: PromoCode, subtotalCents: number) => {
         : promo.value;
     if (promo.maxDiscountCents != null) discountCents = Math.min(discountCents, promo.maxDiscountCents);
     return Math.min(discountCents, subtotalCents);
+};
+
+export const getOrderEta = async (orderId: string): Promise<string | null> => {
+    const { data, error } = await supabase
+        .from("order_dept_slots")
+        .select("dept_ready_at")
+        .eq("order_id", orderId);
+    if (error || !data?.length) return null;
+    const max = data.reduce((m, r) => (r.dept_ready_at > m ? r.dept_ready_at : m), data[0].dept_ready_at);
+    return max;
+};
+
+export const getDeptConfig = async (categoryIds: string[]): Promise<{ categoryId: string; maxWaitMinutes: number }[]> => {
+    if (!categoryIds.length) return [];
+    const { data, error } = await supabase
+        .from("dept_config")
+        .select("category_id, max_wait_minutes")
+        .in("category_id", categoryIds);
+    if (error || !data) return [];
+    return data.map(r => ({ categoryId: r.category_id, maxWaitMinutes: r.max_wait_minutes ?? 45 }));
 };
 
 export const validatePromoCode = async ({

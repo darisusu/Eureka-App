@@ -22,7 +22,13 @@ export default function StaffScreen() {
   const [historyOrders, setHistoryOrders] = useState<StaffOrder[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
-  const { user, logout } = useAuthStore();
+  const { user, logout, isAuthenticated } = useAuthStore();
+
+  useEffect(() => {
+    if (!isAuthenticated || user?.role !== "staff") {
+      router.replace("/sign-in");
+    }
+  }, [isAuthenticated, user?.role]);
 
   const fetchActiveOrders = async (isMounted: { current: boolean }) => {
     try {
@@ -92,6 +98,7 @@ export default function StaffScreen() {
       pending_payment: "received",
       paid: "received",
       collected: "collected",
+      cancelled: "cancelled",
     };
     const nextStatus = nextStatusMap[order.status];
     if (!nextStatus || nextStatus === order.status) return;
