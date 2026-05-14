@@ -1,26 +1,24 @@
-import { Models } from "appwrite";
-import type { StaticImageData } from "next/image";
-
-export interface MenuItem extends Models.Document {
+export interface MenuItem {
+    id: string;
     name: string;
     description: string;
     image_url: string;
     price: number;
-    category_name: string;
-    prep_time_min: number;
+    category_id: string | null;
+    is_available: boolean;
 }
 
-export interface Category extends Models.Document {
+export interface Category {
+    id: string;
     name: string;
-    description: string;
+    description: string | null;
+    has_queue: boolean;
 }
 
 export type User = {
     id: string;
-    accountId: string;
     name: string;
-    email: string;
-    avatar: string;
+    phone: string;
     role: "staff" | "customer";
 };
 
@@ -44,16 +42,18 @@ export interface Order {
     paymentIntentId?: string;
 }
 
-export interface OrderDocument extends Models.Document {
-    userId: string;
+export interface OrderDocument {
+    id: string;
+    user_id: string;
     status: OrderStatus;
-    isPaid: boolean;
+    is_paid: boolean;
     total: number;
-    orderNumber: string;
-    promoId?: string;
-    promoCode?: string;
-    discountCents?: number;
-    paymentIntentId?: string;
+    order_number: number;
+    promo_id?: string;
+    promo_code?: string;
+    discount_cents?: number;
+    payment_intent_id?: string;
+    created_at: string;
 }
 
 export interface OrderItem {
@@ -65,13 +65,15 @@ export interface OrderItem {
     specialRequest?: string;
 }
 
-export interface OrderItemDocument extends Models.Document {
-    orderId: string;
-    menuId: string;
+export interface OrderItemDocument {
+    id: string;
+    order_id: string;
+    menu_id: string;
     name: string;
     price: number;
     qty: number;
-    specialRequest?: string;
+    special_request?: string;
+    created_at: string;
 }
 
 export type StaffOrderItem = {
@@ -122,7 +124,7 @@ export interface CartStore {
 export type PromoType = "PERCENT" | "FIXED";
 
 export interface PromoCode {
-    $id: string;
+    id: string;
     codeUpper: string;
     isActive: boolean;
     type: PromoType;
@@ -198,19 +200,11 @@ export interface CustomInputProps {
 }
 
 export interface CreateUserParams {
-    email: string;
-    password: string;
     name: string;
-}
-
-export interface SignInParams {
-    email: string;
-    password: string;
+    phone: string;
 }
 
 export interface GetMenuParams {
     category: string;
     query: string;
 }
-
-export type ImageAsset = StaticImageData | string;
