@@ -1,0 +1,219 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #FE8C00;
+  --color-dark-100: #181C2E;
+  --color-gray-100: #878787;
+  --color-gray-200: #878787;
+  --color-white-100: #fafafa;
+  --color-white-200: #FE8C00;
+  --color-error: #F14141;
+  --color-success: #2F9B65;
+}
+
+@layer utilities {
+  .font-quicksand {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 400;
+  }
+
+  .font-quicksand-light {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 300;
+  }
+
+  .font-quicksand-medium {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 500;
+  }
+
+  .font-quicksand-semibold {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+  }
+
+  .font-quicksand-bold {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+  }
+
+  .flex-center {
+    @apply flex items-center justify-center;
+  }
+
+  .flex-between {
+    @apply flex items-center justify-between;
+  }
+
+  .flex-start {
+    @apply flex items-start justify-center;
+  }
+}
+
+@layer components {
+  .cart-btn {
+    @apply flex items-center justify-center size-10 rounded-full bg-dark-100;
+  }
+
+  .cart-badge {
+    @apply absolute -top-2 -right-1 flex items-center justify-center size-5 bg-primary rounded-full;
+  }
+
+  .cart-item {
+    @apply flex flex-row items-end justify-between mb-4 bg-white rounded-xl p-3 shadow-md shadow-dark-100/10;
+  }
+
+  .cart-item__image {
+    @apply size-24 bg-primary/10 rounded-lg flex items-center justify-center;
+  }
+
+  .cart-item__actions {
+    @apply flex flex-row items-center justify-center size-5 bg-primary/10 rounded-md;
+  }
+
+  .custom-btn {
+    @apply bg-primary rounded-full p-3 w-full flex flex-row justify-center cursor-pointer;
+  }
+
+  .custom-header {
+    @apply w-full flex flex-row items-center justify-between mb-10;
+  }
+
+  .label {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 500;
+    @apply text-base text-start w-full text-gray-500 pl-2;
+  }
+
+  .input {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    @apply rounded-lg p-3 w-full text-base text-dark-100 border-b leading-5 outline-none focus:border-primary;
+  }
+
+  .filter {
+    @apply px-6 py-3 rounded-full mr-2 shadow-sm shadow-black/10;
+  }
+
+  .menu-card {
+    @apply bg-white shadow-md shadow-black/10 rounded-3xl p-4;
+  }
+
+  .profile-field {
+    @apply flex flex-row items-center justify-start mb-4;
+  }
+
+  .profile-field__icon {
+    @apply size-12 rounded-full bg-primary/10 flex items-center justify-center mr-3;
+  }
+
+  .searchbar {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 500;
+    @apply relative flex flex-row items-center justify-center w-full bg-white shadow-md shadow-black/10 rounded-full text-dark-100 gap-5;
+  }
+
+  .tab-icon {
+    @apply flex min-w-20 items-center justify-center min-h-full gap-1 mt-12;
+  }
+
+  .offer-card {
+    @apply w-full h-48 my-3 rounded-xl overflow-hidden shadow-lg flex items-center gap-5;
+  }
+
+  .offer-card__info {
+    @apply flex-1 h-full flex flex-col justify-center items-start gap-4;
+  }
+
+  .profile-avatar {
+    @apply relative size-28 border-white border-2 rounded-full;
+  }
+
+  .profile-edit {
+    @apply flex items-center justify-center absolute bottom-2 right-0 bg-primary border-2 border-white size-7 p-2 rounded-full;
+  }
+
+  .h1-bold {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    @apply text-3xl;
+  }
+
+  .h3-bold {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    @apply text-xl;
+  }
+
+  .base-bold {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+  }
+
+  .base-semibold {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    @apply text-lg;
+  }
+
+  .base-regular {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 400;
+    @apply text-lg;
+  }
+
+  .paragraph-bold {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    @apply text-base;
+  }
+
+  .paragraph-semibold {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    @apply text-base;
+  }
+
+  .paragraph-medium {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 500;
+    @apply text-base;
+  }
+
+  .paragraph-regular {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 400;
+    @apply text-base;
+  }
+
+  .body-medium {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 500;
+    @apply text-sm;
+  }
+
+  .body-regular {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 400;
+    @apply text-sm;
+  }
+
+  .small-bold {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    @apply text-xs;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Quicksand', sans-serif;
+  font-weight: 400;
+  background: #ffffff;
+  color: #181C2E;
+}
