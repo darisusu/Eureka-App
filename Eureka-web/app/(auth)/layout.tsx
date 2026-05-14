@@ -2,8 +2,9 @@
 
 import useAuthStore from "@/store/auth.store";
 import Image from "next/image";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import fishDefault from "@/assets/mascots/Fish-Default.png";
+import { useEffect } from "react";
 
 export default function AuthLayout({
   children,
@@ -11,9 +12,16 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   const { isAuthenticated, user } = useAuthStore();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace(user?.role === "staff" ? "/staff" : "/search");
+    }
+  }, [isAuthenticated, user?.role, router]);
 
   if (isAuthenticated) {
-    redirect(user?.role === "staff" ? "/staff" : "/");
+    return null;
   }
 
   return (
