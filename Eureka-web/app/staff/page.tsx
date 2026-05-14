@@ -4,9 +4,8 @@ import CustomButton from "@/components/CustomButton";
 import {
   getActiveOrders,
   getCollectedOrders,
-  signOut,
   updateOrderStatus,
-} from "@/lib/appwrite";
+} from "@/lib/supabase";
 import useAuthStore from "@/store/auth.store";
 import type { StaffOrder } from "@/type";
 import { useRouter } from "next/navigation";
@@ -23,7 +22,7 @@ export default function StaffScreen() {
   const [historyOrders, setHistoryOrders] = useState<StaffOrder[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
-  const { user, setIsAuthenticated, setUser, isLoading } = useAuthStore();
+  const { user, logout } = useAuthStore();
 
   const fetchActiveOrders = async (isMounted: { current: boolean }) => {
     try {
@@ -123,18 +122,10 @@ export default function StaffScreen() {
     }
   };
 
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
     setIsSigningOut(true);
-    try {
-      await signOut();
-      setIsAuthenticated(false);
-      setUser(null);
-      router.replace("/sign-in");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to log out.");
-    } finally {
-      setIsSigningOut(false);
-    }
+    logout();
+    router.replace("/sign-in");
   };
 
   return (
@@ -308,15 +299,11 @@ export default function StaffScreen() {
           <h2 className="text-lg font-bold text-gray-900">Staff Settings</h2>
           <div className="mt-6">
             <p className="text-sm font-semibold text-gray-700">Name</p>
-            <p className="text-base text-gray-500 mt-1">
-              {isLoading ? "Loading..." : user?.name ?? "—"}
-            </p>
+            <p className="text-base text-gray-500 mt-1">{user?.name ?? "—"}</p>
           </div>
           <div className="mt-4">
-            <p className="text-sm font-semibold text-gray-700">Email</p>
-            <p className="text-base text-gray-500 mt-1">
-              {isLoading ? "Loading..." : user?.email ?? "—"}
-            </p>
+            <p className="text-sm font-semibold text-gray-700">Phone</p>
+            <p className="text-base text-gray-500 mt-1">{user?.phone ?? "—"}</p>
           </div>
           <CustomButton
             title="Log out"

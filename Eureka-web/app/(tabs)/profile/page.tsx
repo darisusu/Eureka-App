@@ -1,7 +1,7 @@
 "use client";
 
 import CustomButton from "@/components/CustomButton";
-import { getRecentOrders, signOut } from "@/lib/appwrite";
+import { getRecentOrders } from "@/lib/supabase";
 import useAuthStore from "@/store/auth.store";
 import useOrdersStore, { RECENT_ORDERS_LIMIT } from "@/store/orders.store";
 import { LogOut } from "lucide-react";
@@ -13,14 +13,13 @@ export default function Profile() {
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isOrdersLoading, setIsOrdersLoading] = useState(false);
-  const { user, isLoading, setIsAuthenticated, setUser } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const recentOrders = useOrdersStore((state) => state.recentOrders);
   const setRecentOrders = useOrdersStore((state) => state.setRecentOrders);
 
   useEffect(() => {
     const loadOrders = async () => {
       if (!user?.id) {
-        if (isLoading) return;
         setRecentOrders([]);
         return;
       }
@@ -40,20 +39,12 @@ export default function Profile() {
     };
 
     void loadOrders();
-  }, [user?.id, isLoading]);
+  }, [user?.id]);
 
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
     setIsSigningOut(true);
-    try {
-      await signOut();
-      setIsAuthenticated(false);
-      setUser(null);
-      router.replace("/sign-in");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to log out.");
-    } finally {
-      setIsSigningOut(false);
-    }
+    logout();
+    router.replace("/sign-in");
   };
 
   return (
@@ -63,16 +54,12 @@ export default function Profile() {
 
         <div className="mt-6">
           <p className="paragraph-bold text-dark-100">Name</p>
-          <p className="paragraph-medium text-gray-100 mt-1">
-            {isLoading ? "Loading..." : user?.name ?? "—"}
-          </p>
+          <p className="paragraph-medium text-gray-100 mt-1">{user?.name ?? "—"}</p>
         </div>
 
         <div className="mt-4">
-          <p className="paragraph-bold text-dark-100">Email</p>
-          <p className="paragraph-medium text-gray-100 mt-1">
-            {isLoading ? "Loading..." : user?.email ?? "—"}
-          </p>
+          <p className="paragraph-bold text-dark-100">Phone</p>
+          <p className="paragraph-medium text-gray-100 mt-1">{user?.phone ?? "—"}</p>
         </div>
 
         <div className="mt-8">
