@@ -3,6 +3,13 @@ import type { User } from "@/type";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+const normalizePhone = (phone: string): string => {
+    const digits = phone.replace(/\s/g, "");
+    if (digits.startsWith("+65")) return digits.slice(3);
+    if (digits.startsWith("65") && digits.length === 10) return digits.slice(2);
+    return digits;
+};
+
 // Accepts most international formats: optional +/country code, then 7–15 digits
 const isValidPhone = (phone: string) => /^\+?[\d\s\-()]{7,20}$/.test(phone.trim());
 
@@ -32,6 +39,7 @@ const useAuthStore = create<AuthState>()(
             _pendingPhone: null,
 
             signIn: async (phone) => {
+                phone = normalizePhone(phone);
                 if (!isValidPhone(phone)) return { status: "invalid_phone" };
                 const user = await getUserByPhone(phone);
                 if (!user) return { status: "not_found" };
@@ -58,6 +66,7 @@ const useAuthStore = create<AuthState>()(
             },
 
             signUp: async (name, phone) => {
+                phone = normalizePhone(phone);
                 if (!isValidPhone(phone)) throw new Error("Please enter a valid phone number.");
                 const existing = await getUserByPhone(phone);
                 if (existing) throw new Error("This phone number is already registered.");
