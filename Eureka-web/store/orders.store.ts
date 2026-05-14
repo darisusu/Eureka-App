@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import type { OrderHistoryEntry } from "@/type";
+import type { OrderHistoryEntry, OrderStatus } from "@/type";
 
 export const RECENT_ORDERS_LIMIT = 3;
 
@@ -8,6 +8,7 @@ type OrdersState = {
     recentOrders: OrderHistoryEntry[];
     setRecentOrders: (orders: OrderHistoryEntry[]) => void;
     addRecentOrder: (order: OrderHistoryEntry) => void;
+    updateRecentOrderStatus: (orderId: string, status: OrderStatus) => void;
     clearRecentOrders: () => void;
 };
 
@@ -30,6 +31,12 @@ const useOrdersStore = create<OrdersState>()(
                     ];
                     return { recentOrders: trimRecentOrders(next) };
                 }),
+            updateRecentOrderStatus: (orderId, status) =>
+                set((state) => ({
+                    recentOrders: state.recentOrders.map((o) =>
+                        o.orderId === orderId ? { ...o, status } : o
+                    ),
+                })),
             clearRecentOrders: () => set({ recentOrders: [] }),
         }),
         {

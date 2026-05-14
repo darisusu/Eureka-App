@@ -1,8 +1,13 @@
 "use client";
 
+import { getOrderStatus } from "@/lib/supabase";
 import useOrdersStore from "@/store/orders.store";
 import { Package } from "lucide-react";
 import Link from "next/link";
+import { useEffect } from "react";
+
+const POLL_INTERVAL_MS = 10_000;
+const ACTIVE_STATUSES = new Set(["received", "preparing", "ready"]);
 
 const preparationSteps = ["received", "preparing", "ready"];
 
@@ -24,6 +29,21 @@ const parseItemsSummary = (summary: string) =>
 
 export default function Home() {
   const latestOrder = useOrdersStore((state) => state.recentOrders[0]);
+  const updateRecentOrderStatus = useOrdersStore((s) => s.updateRecentOrderStatus);
+
+  useEffect(() => {
+    if (!latestOrder || !ACTIVE_STATUSES.has(latestOrder.status)) return;
+
+    const poll = async () => {
+      const status = await getOrderStatus(latestOrder.orderId);
+      if (status && status !== latestOrder.status) {
+        updateRecentOrderStatus(latestOrder.orderId, status);
+      }
+    };
+
+    const id = setInterval(() => { void poll(); }, POLL_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [latestOrder?.orderId, latestOrder?.status]);
 
   const orderDetails = latestOrder
     ? {
