@@ -406,7 +406,7 @@ export default function Cart() {
         });
         clearCart();
         toast.success(`Order placed! Your order number is ${checkout.orderNumber}.`);
-        router.replace("/");
+        router.replace("/search");
         return;
       }
 
@@ -448,7 +448,7 @@ export default function Cart() {
     setClientSecret(null);
     setPendingCheckout(null);
     toast.success(`Payment successful! Order ${orderNumber} placed.`);
-    router.replace("/");
+    router.replace("/search");
   };
 
   return (
