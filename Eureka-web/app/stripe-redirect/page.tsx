@@ -1,6 +1,6 @@
 "use client";
 
-import { confirmCheckoutPayment } from "@/lib/appwrite";
+import { confirmCheckoutPayment } from "@/lib/supabase";
 import useAuthStore from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
 import useOrdersStore from "@/store/orders.store";
@@ -26,16 +26,16 @@ function StripeRedirectInner() {
     const orderId = searchParams.get("order_id");
     const redirectStatus = searchParams.get("redirect_status");
 
-    if (redirectStatus !== "succeeded" || !paymentIntent || !orderId || !user?.id) {
+    if (redirectStatus !== "succeeded" || !paymentIntent || !orderId) {
       setStatus("error");
-      setErrorMsg("Payment verification failed. Please check your cart.");
+      setErrorMsg("Payment verification failed. Please contact staff with your order reference.");
       return;
     }
 
     const confirm = async () => {
       try {
         const confirmation = await confirmCheckoutPayment({
-          userId: user.id,
+          userId: user?.id ?? "",
           orderId,
           paymentIntentId: paymentIntent,
         });

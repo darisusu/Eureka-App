@@ -2,7 +2,7 @@
 
 import CartItem from "@/components/CartItem";
 import CustomButton from "@/components/CustomButton";
-import { calculateCartTotals, createCheckout } from "@/lib/appwrite";
+import { calculateCartTotals, createCheckout } from "@/lib/supabase";
 import useAuthStore from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
 import useOrdersStore from "@/store/orders.store";
@@ -368,7 +368,6 @@ export default function Cart() {
         userId: user.id,
         items,
         promoCode: appliedPromo?.codeUpper,
-        customerEmail: user.email,
       });
 
       setPricing({
