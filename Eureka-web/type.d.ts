@@ -28,7 +28,8 @@ export type OrderStatus =
     | "received"
     | "preparing"
     | "ready"
-    | "collected";
+    | "collected"
+    | "cancelled";
 
 export interface Order {
     userId: string;
@@ -99,6 +100,7 @@ export type OrderHistoryEntry = {
     total: number;
     status: OrderStatus;
     itemsSummary: string;
+    readyAt?: string;
 };
 
 export interface CartItemType {
@@ -108,6 +110,7 @@ export interface CartItemType {
     image_url: string;
     quantity: number;
     specialRequest?: string;
+    categoryId?: string;
 }
 
 export interface CartStore {
@@ -147,12 +150,14 @@ export type CheckoutResponse = CartTotalsResponse & {
     paymentRequired: boolean;
     paymentIntentId: string | null;
     clientSecret: string | null;
+    readyAt?: string;
 };
 
 export type CheckoutConfirmResponse = {
     orderId: string;
     status: OrderStatus;
     isPaid: boolean;
+    readyAt?: string;
 };
 
 export type EstimatedTime = {
