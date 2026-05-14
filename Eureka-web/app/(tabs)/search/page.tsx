@@ -3,26 +3,32 @@
 import Filter from "@/components/Filter";
 import MenuCard from "@/components/MenuCard";
 import SearchBar from "@/components/SearchBar";
-import { getCategories, getMenu } from "@/lib/appwrite";
-import useAppwrite from "@/lib/useAppwrite";
+import { getCategories, getMenu } from "@/lib/supabase";
 import type { Category, MenuItem } from "@/type";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 function SearchInner() {
   const searchParams = useSearchParams();
   const category = searchParams.get("category") ?? "";
   const query = searchParams.get("query") ?? "";
 
-  const { data, refetch, loading } = useAppwrite({
-    fn: getMenu,
-    params: { category, query },
-  });
-
-  const { data: categories } = useAppwrite({ fn: getCategories });
+  const [menu, setMenu] = useState<MenuItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    refetch({ category, query });
+    getCategories()
+      .then((data) => setCategories(data as Category[]))
+      .catch(() => null);
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    getMenu({ category, query })
+      .then((data) => setMenu(data as MenuItem[]))
+      .catch(() => setMenu([]))
+      .finally(() => setLoading(false));
   }, [category, query]);
 
   return (
@@ -38,7 +44,7 @@ function SearchInner() {
             </div>
           </div>
           <SearchBar />
-          <Filter categories={(categories as unknown as Category[]) || []} />
+          <Filter categories={categories} />
         </div>
 
         <div className="grid grid-cols-2 gap-7 px-5 pb-40">
@@ -46,14 +52,12 @@ function SearchInner() {
             <p className="col-span-2 paragraph-medium text-gray-200 text-center py-8">
               Loading...
             </p>
-          ) : !data || data.length === 0 ? (
+          ) : menu.length === 0 ? (
             <p className="col-span-2 paragraph-medium text-gray-200 text-center py-8">
               No results found.
             </p>
           ) : (
-            data.map((item) => (
-              <MenuCard key={item.$id} item={item as unknown as MenuItem} />
-            ))
+            menu.map((item) => <MenuCard key={item.id} item={item} />)
           )}
         </div>
       </div>

@@ -1,20 +1,15 @@
 "use client";
 
-import { appwriteConfig } from "@/lib/appwrite";
 import { useCartStore } from "@/store/cart.store";
 import type { MenuItem } from "@/type";
 import { Plus, X } from "lucide-react";
 import { useState } from "react";
 
 const MenuCard = ({
-  item: { $id, image_url, name, price, description },
+  item: { id, image_url, name, price, description },
 }: {
   item: MenuItem;
 }) => {
-  const imageUrl = image_url
-    ? `${image_url}${image_url.includes("?") ? "&" : "?"}project=${appwriteConfig.projectId}`
-    : "";
-
   const { addItem } = useCartStore();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [specialRequest, setSpecialRequest] = useState("");
@@ -26,10 +21,10 @@ const MenuCard = ({
 
   const handleAddToCart = () => {
     addItem({
-      id: $id,
+      id,
       name,
       price,
-      image_url: imageUrl,
+      image_url: image_url ?? "",
       specialRequest: specialRequest.trim() || undefined,
     });
     setIsModalVisible(false);
@@ -40,9 +35,9 @@ const MenuCard = ({
     <>
       <div className="menu-card h-[260px]">
         <div className="relative">
-          {imageUrl ? (
+          {image_url ? (
             <img
-              src={imageUrl}
+              src={image_url}
               alt={name}
               className="w-full h-36 rounded-2xl object-cover"
             />
@@ -66,9 +61,9 @@ const MenuCard = ({
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-6">
           <div className="bg-white rounded-2xl p-5 w-full max-w-sm">
             <div className="flex items-center gap-x-4">
-              {imageUrl ? (
+              {image_url ? (
                 <img
-                  src={imageUrl}
+                  src={image_url}
                   alt={name}
                   className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
                 />

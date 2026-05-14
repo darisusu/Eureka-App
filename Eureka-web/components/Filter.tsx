@@ -10,8 +10,8 @@ const Filter = ({ categories }: { categories: Category[] }) => {
   const searchParams = useSearchParams();
   const [active, setActive] = useState(searchParams.get("category") ?? "");
 
-  const filterData: { $id: string; name: string }[] = [
-    { $id: "all", name: "All" },
+  const filterData: { id: string; name: string }[] = [
+    { id: "all", name: "All" },
     ...categories,
   ];
 
@@ -30,17 +30,17 @@ const Filter = ({ categories }: { categories: Category[] }) => {
     <div className="flex overflow-x-auto gap-2 pb-3 scrollbar-hide">
       {filterData.map((item) => (
         <button
-          key={item.$id}
-          onClick={() => handlePress(item.$id)}
+          key={item.id}
+          onClick={() => handlePress(item.id)}
           className={cn(
             "filter flex-shrink-0 transition-colors",
-            active === item.$id ? "bg-amber-500" : "bg-white"
+            active === item.id ? "bg-amber-500" : "bg-white"
           )}
         >
           <span
             className={cn(
               "body-medium",
-              active === item.$id ? "text-white" : "text-gray-200"
+              active === item.id ? "text-white" : "text-gray-200"
             )}
           >
             {item.name}
