@@ -222,6 +222,7 @@ $$ LANGUAGE plpgsql;
 -- Service role (used by all API routes) always bypasses RLS.
 -- Anon key (client-side reads) gets SELECT only — no writes.
 
+-- Transactional tables (written via service role in API routes)
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
@@ -233,3 +234,14 @@ CREATE POLICY "public read" ON orders FOR SELECT USING (true);
 CREATE POLICY "public read" ON order_items FOR SELECT USING (true);
 CREATE POLICY "public read" ON order_dept_slots FOR SELECT USING (true);
 CREATE POLICY "public read" ON promo_redemptions FOR SELECT USING (true);
+
+-- Read-only catalogue tables (never written by clients)
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE dept_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE menu ENABLE ROW LEVEL SECURITY;
+ALTER TABLE promo_codes ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "public read" ON categories FOR SELECT USING (true);
+CREATE POLICY "public read" ON dept_config FOR SELECT USING (true);
+CREATE POLICY "public read" ON menu FOR SELECT USING (true);
+CREATE POLICY "public read" ON promo_codes FOR SELECT USING (true);

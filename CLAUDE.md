@@ -140,7 +140,6 @@ STRIPE_CURRENCY
 ## What Is Not Yet Built
 
 - Delivery, dine-in table management, in-store POS, inventory management (explicit non-goals for MVP)
-- RLS policies on Supabase tables (currently mitigated by API routes always using service role key; see `supabase-schema.sql` for recommended policies)
 - `orders.ready_at` is populated from `order_dept_slots` but not surfaced separately to the customer beyond the ETA label
 
 ---
