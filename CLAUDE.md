@@ -51,6 +51,7 @@ Eureka-App/
 | `POST /api/create-checkout` | `action: "create"` — creates order + Stripe PaymentIntent + `order_dept_slots`; `action: "confirm"` — verifies payment, marks order received, returns `readyAt` |
 | `POST /api/webhooks/stripe` | Stripe webhook — handles `payment_intent.succeeded` / `payment_intent.payment_failed` as fallback for out-of-band confirmations |
 | `POST /api/verify-pin` | Validates staff PIN against `pin_hash` during sign-in |
+| `POST /api/estimate-eta` | Accepts `categoryIds[]`, calls `calculate_dept_ready_at` for each, returns `minutesFromNow` for pre-checkout display |
 
 ---
 
@@ -75,15 +76,15 @@ Standard Appwrite Auth: `account.create()` registers an account, `account.create
 
 ### Web (`Eureka-web`)
 - Sign-up and sign-in flows (phone-only, with role-based redirect); staff sign-in requires PIN
-- Menu browsing: text search (ilike), filter by category_id
-- Cart: add/remove/increase/decrease qty; same item with different `specialRequest` values becomes a separate line item; `categoryId` stored per item for ETA calculation
+- Menu browsing: text search (ilike), filter by category; items displayed grouped by category with section headers; responsive 3-column grid on desktop, single column on mobile
+- Cart: add/remove/increase/decrease qty; same item with different `specialRequest` values becomes a separate line item; `categoryId` stored per item for ETA calculation; cart is a slide-in drawer (`CartDrawer`) opened from the top nav — no separate `/cart` page (redirects to `/search`)
+- Pre-checkout ETA: `POST /api/estimate-eta` called from the cart drawer to show estimated wait before checkout
 - Promo code redemption: validated server-side via `/api/calculate-cart`; `PERCENT` and `FIXED` types, per-user usage limit, min subtotal, max discount cap; race condition protected by `UNIQUE(promo_id, user_id)` DB constraint
 - Checkout: `/api/create-checkout` creates order + Stripe PaymentIntent + `order_dept_slots` (via `calculate_dept_ready_at` RPC); if `totalCents === 0` order is marked received immediately; returns `readyAt`
-- Stripe payment: `<PaymentElement>` in a modal overlay, redirects through `/stripe-redirect` on completion
+- Stripe payment: `<PaymentElement>` rendered inside the `CartDrawer`, redirects through `/stripe-redirect` on completion
 - Stripe webhook: `/api/webhooks/stripe` handles `payment_intent.succeeded` as fallback if customer closes browser before redirect
 - Post-payment confirmation: `/api/create-checkout` with `action: "confirm"` verifies PaymentIntent, sets order to `"received"`, returns `readyAt` from `order_dept_slots`
-- Cart ETA: dynamically fetched from `dept_config.max_wait_minutes` for the categories in the current cart
-- Navigation: middleware redirects `/` → `/search`; bottom tab bar (Menu / Cart / Profile) — no Home tab; no desktop nav
+- Navigation: middleware redirects `/` → `/search`; fixed top nav bar with EurekaGO branding (fish logo), dynamic cart pill, and Profile link — no bottom tab bar, no desktop sidebar
 - Customer order tracking: **removed from the customer UI**; the home screen (`/`) is no longer customer-facing (redirects to `/search`)
 - Profile screen: displays name and phone, shows up to 3 recent orders fetched from Supabase on load
 - Staff dashboard: three-column kanban (Received / Preparing / Ready); role-gated (redirects non-staff); optimistic status updates with error rollback; polls every 10 s for active orders and every 15 s for history; "Cooking X min" timer uses `updated_at`; History tab; Settings tab with sign-out
@@ -100,11 +101,12 @@ Schema source: `Eureka-web/supabase-schema.sql`
 | `categories` | `id`, `name`, `description`, `has_queue` |
 | `dept_config` | `id`, `category_id` (fk), `base_prep_minutes`, `gap_minutes`, `max_wait_minutes` |
 | `menu` | `id`, `name`, `description`, `image_url`, `price` (numeric dollars), `category_id` (fk), `is_available` |
-| `orders` | `id`, `user_id` (fk), `total` (numeric dollars), `order_number` (int, auto via sequence trigger), `is_paid`, `status`, `ready_at`, `promo_id`, `promo_code`, `discount_cents`, `payment_intent_id`, `created_at` |
+| `orders` | `id`, `user_id` (fk), `total` (numeric dollars), `order_number` (int, resets daily at 4am SGT via `daily_order_counter`), `is_paid`, `status`, `ready_at`, `updated_at`, `promo_id`, `promo_code`, `discount_cents`, `payment_intent_id`, `created_at` |
 | `order_items` | `id`, `order_id` (fk), `menu_id` (fk), `name`, `price`, `qty`, `special_request` |
 | `order_dept_slots` | `id`, `order_id` (fk), `category_id` (fk), `dept_ready_at` |
 | `promo_codes` | `id`, `code_upper` (unique), `is_active`, `type` ("PERCENT"\|"FIXED"), `value`, `max_discount_cents`, `min_subtotal_cents`, `usage_limit_per_user` |
 | `promo_redemptions` | `id`, `promo_id` (fk), `user_id` (fk), `order_id` (fk), `redeemed_at`, `discount_cents` |
+| `daily_order_counter` | `business_date` (DATE pk), `last_number` (int) — tracks per-day order number; business day defined as SGT minus 4 h so 00:00–03:59 SGT rolls into the previous day |
 
 **Order status flow:** `pending_payment` → `received` → `preparing` → `ready` → `collected` (also `cancelled` — set manually via Supabase console only, no customer-facing cancel UI)
 

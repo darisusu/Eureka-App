@@ -65,5 +65,7 @@ No Supabase Auth session. Users are plain rows in the `users` table:
 - All monetary values in API routes use **cents** (integers). DB stores dollars (`NUMERIC(10,2)`). Convert at the boundary: `cents = Math.round(dollars * 100)`.
 - Server-side API routes (`/api/*`) use `SUPABASE_SECRET_KEY` to bypass RLS. Never use this key client-side.
 - Cart is **not** persisted (lost on refresh). Orders store IS persisted (last 3 orders kept in localStorage).
+- Cart is a slide-in **drawer** (`CartDrawer`), not a separate page. The `/cart` route redirects to `/search`.
 - Staff dashboard polls every 10 s (active orders) and 15 s (history). No Supabase Realtime.
-- `/` redirects to `/search` (middleware). The customer landing screen is the menu.
+- `/` redirects to `/search` (middleware). Navigation is a fixed top bar; no bottom tab bar.
+- Order numbers reset daily at 4am SGT. The `daily_order_counter` table tracks the per-day counter.

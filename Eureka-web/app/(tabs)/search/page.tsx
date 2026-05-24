@@ -33,7 +33,7 @@ function SearchInner() {
 
   return (
     <div className="min-h-screen">
-      <div className="bg-white sticky top-16 z-30">
+      <div className="bg-white sticky top-[84px] z-30">
         <div className="max-w-5xl mx-auto pt-5 pb-2 px-5">
           <SearchBar />
         </div>

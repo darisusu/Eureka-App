@@ -28,10 +28,11 @@ Next.js web app covering the full customer flow and staff dashboard.
 
 **Features:**
 - Phone-number sign-in (no password); staff sign-in requires PIN
-- Menu browsing with search and category filters
-- Cart with special requests and promo code redemption
-- Stripe payment via `<PaymentElement>` modal; webhook fallback for out-of-band confirmation
+- Menu browsing with text search and category filters; items grouped by category in a responsive 3-column grid
+- Slide-in cart drawer with special requests, promo code redemption, and pre-checkout ETA estimate
+- Stripe payment via `<PaymentElement>` inside the cart drawer; webhook fallback for out-of-band confirmation
 - Queue-aware ETA: checkout populates `order_dept_slots` via the `calculate_dept_ready_at` DB function; estimated wait time shown post-payment
+- Daily order numbering: `order_number` resets each day at 4am SGT
 - Profile page: recent order history (up to 3 orders)
 - Staff kanban dashboard (Received → Preparing → Ready → Collected) with live polling
 

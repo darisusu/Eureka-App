@@ -69,9 +69,9 @@ const MenuCard = ({
                   className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
                 />
               ) : null}
-              <div className="flex-1 min-w-0">
-                <p className="base-bold text-dark-100 line-clamp-2">{name}</p>
-                <p className="paragraph-bold text-primary mt-1">${price}</p>
+              <div className="flex items-baseline gap-x-2 flex-1 min-w-0">
+                <p className="base-bold text-dark-100 line-clamp-1 flex-1 min-w-0">{name}</p>
+                <p className="paragraph-bold text-primary whitespace-nowrap">${price}</p>
               </div>
               <button
                 onClick={() => setIsModalVisible(false)}
@@ -85,7 +85,7 @@ const MenuCard = ({
               <p className="paragraph-regular text-gray-200 mt-3">{description}</p>
             )}
 
-            <p className="paragraph-regular text-gray-200 mt-4">
+            <p className="body-regular text-gray-200 mt-4">
               Note to restaurant / Special Request (optional)
             </p>
             <textarea

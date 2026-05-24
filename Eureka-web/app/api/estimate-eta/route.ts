@@ -18,7 +18,8 @@ export async function POST(req: NextRequest) {
         const results: { categoryId: string; readyAt: string | null }[] = [];
 
         for (const categoryId of categoryIds) {
-            const { data: readyAt } = await supabase.rpc("calculate_dept_ready_at", { p_category_id: categoryId });
+            const { data: readyAt, error } = await supabase.rpc("calculate_dept_ready_at", { p_category_id: categoryId });
+            console.log("[estimate-eta] categoryId:", categoryId, "readyAt:", readyAt, "error:", error);
             results.push({ categoryId, readyAt: readyAt as string | null });
         }
 

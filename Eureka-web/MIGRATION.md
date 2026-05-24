@@ -83,12 +83,17 @@ Changes made to `Eureka-web` after the migration and the Appwrite → Supabase s
 | Backend | Appwrite → Supabase; cloud functions → Next.js API routes |
 | Auth | Email + password → phone-number lookup (no session); staff require PIN |
 | Phone normalisation | SG numbers normalised to `+65XXXXXXXX` on sign-in and sign-up |
-| Navigation | Removed Home tab; `/` redirects to `/search`; no desktop nav bar |
+| Navigation | Removed bottom tab bar; fixed top nav bar with EurekaGO branding (fish logo), dynamic cart pill, and Profile link; `/` redirects to `/search` |
+| Branding | App renamed **EurekaGO**; fish mascot logo (`/public/fish.png`) in top nav |
+| Cart UX | Cart is now a slide-in drawer (`CartDrawer`); no separate `/cart` page (redirects to `/search`) |
+| Menu layout | Menu grouped by category with section headers; responsive `grid-cols-1 sm:grid-cols-3` layout |
 | Customer order UX | Removed live order tracking screen; customers see ETA post-checkout and order history on the profile page |
-| Database | `orders.updated_at` column added (auto-update trigger `trg_orders_updated_at`) |
+| Database | `orders.updated_at` column + trigger; `daily_order_counter` table for per-day order numbering |
+| Order numbering | `order_number` resets daily at 4am SGT (business day boundary) via `daily_order_counter` |
 | Promo integrity | `UNIQUE(promo_id, user_id)` constraint on `promo_redemptions` to prevent concurrent double-redemption |
 | Stripe webhook | `/api/webhooks/stripe` added as fallback for out-of-band payment confirmation |
-| ETA | Cart ETA dynamically fetched from `dept_config.max_wait_minutes` (was hardcoded) |
+| ETA (cart) | Pre-checkout ETA shown in cart drawer via `POST /api/estimate-eta` |
+| ETA (cart, legacy) | Cart ETA dynamically fetched from `dept_config.max_wait_minutes` (was hardcoded) |
 
 ---
 

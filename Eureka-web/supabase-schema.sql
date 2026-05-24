@@ -1,9 +1,15 @@
 -- ============================================
--- EurekaGO — Full Schema Migration
--- Run this in Supabase SQL Editor
+-- EurekaGO — Authoritative Schema
+-- Reflects current Supabase DB state.
+-- To apply from scratch: run the full file.
+-- To apply individual migrations: paste only
+-- the relevant section at the bottom.
 -- ============================================
 
--- 1. CATEGORIES
+-- ============================================
+-- TABLES
+-- ============================================
+
 CREATE TABLE categories (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
@@ -12,7 +18,6 @@ CREATE TABLE categories (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. DEPARTMENT CONFIG (per-category queue settings)
 CREATE TABLE dept_config (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   category_id UUID NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
@@ -22,7 +27,6 @@ CREATE TABLE dept_config (
   UNIQUE(category_id)
 );
 
--- 3. USERS
 CREATE TABLE users (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
@@ -32,7 +36,6 @@ CREATE TABLE users (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. MENU
 CREATE TABLE menu (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
@@ -44,7 +47,6 @@ CREATE TABLE menu (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. ORDERS
 CREATE TABLE orders (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES users(id),
@@ -63,7 +65,6 @@ CREATE TABLE orders (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 6. ORDER ITEMS
 CREATE TABLE order_items (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
@@ -75,7 +76,6 @@ CREATE TABLE order_items (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 7. ORDER DEPARTMENT SLOTS (tracks per-department queue slots)
 CREATE TABLE order_dept_slots (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
@@ -84,7 +84,6 @@ CREATE TABLE order_dept_slots (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 8. PROMO CODES
 CREATE TABLE promo_codes (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   code_upper TEXT NOT NULL UNIQUE,
@@ -97,14 +96,20 @@ CREATE TABLE promo_codes (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 9. PROMO REDEMPTIONS
 CREATE TABLE promo_redemptions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   promo_id UUID NOT NULL REFERENCES promo_codes(id),
   user_id UUID NOT NULL REFERENCES users(id),
   order_id UUID NOT NULL REFERENCES orders(id),
   redeemed_at TIMESTAMPTZ DEFAULT NOW(),
-  discount_cents INTEGER
+  discount_cents INTEGER,
+  CONSTRAINT uq_promo_user UNIQUE (promo_id, user_id)
+);
+
+-- Daily order number counter (resets at 4am SGT each day)
+CREATE TABLE daily_order_counter (
+  business_date DATE PRIMARY KEY,
+  last_number INTEGER NOT NULL DEFAULT 0
 );
 
 -- ============================================
@@ -120,22 +125,15 @@ CREATE INDEX idx_dept_slots_category_ready ON order_dept_slots(category_id, dept
 CREATE INDEX idx_promo_redemptions_user_promo ON promo_redemptions(user_id, promo_id);
 
 -- ============================================
--- DAILY ORDER NUMBER (resets at 4am SGT each day)
+-- FUNCTIONS & TRIGGERS
 -- ============================================
 
--- Tracks the running counter per business day.
--- Business day = Singapore calendar date after subtracting 4 h,
--- so orders placed 00:00–03:59 SGT still count as the previous day.
-CREATE TABLE daily_order_counter (
-  business_date DATE PRIMARY KEY,
-  last_number   INTEGER NOT NULL DEFAULT 0
-);
-
+-- Order number: increments per business day (4am SGT cutoff)
 CREATE OR REPLACE FUNCTION set_order_number()
 RETURNS TRIGGER AS $$
 DECLARE
   v_business_date DATE;
-  v_order_number  INTEGER;
+  v_order_number INTEGER;
 BEGIN
   v_business_date := (NOW() AT TIME ZONE 'Asia/Singapore' - INTERVAL '4 hours')::DATE;
 
@@ -155,10 +153,7 @@ CREATE TRIGGER trg_set_order_number
   FOR EACH ROW
   EXECUTE FUNCTION set_order_number();
 
--- ============================================
--- AUTO-UPDATE updated_at ON ORDERS
--- ============================================
-
+-- Auto-update orders.updated_at (powers staff "Cooking X min" timer)
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -172,20 +167,8 @@ CREATE TRIGGER trg_orders_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION set_updated_at();
 
--- ============================================
--- MIGRATION: run this if orders table already exists
--- ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
--- (then create the trigger above)
--- ============================================
-
--- ============================================
--- ATOMIC ETA CALCULATION FUNCTION
--- Prevents race conditions on concurrent orders
--- ============================================
-
-CREATE OR REPLACE FUNCTION calculate_dept_ready_at(
-  p_category_id UUID
-)
+-- Atomic ETA calculation — called from /api/create-checkout
+CREATE OR REPLACE FUNCTION calculate_dept_ready_at(p_category_id UUID)
 RETURNS TIMESTAMPTZ AS $$
 DECLARE
   v_last_ready TIMESTAMPTZ;
@@ -218,8 +201,7 @@ BEGIN
   SELECT MAX(ods.dept_ready_at) INTO v_last_ready
   FROM order_dept_slots ods
   WHERE ods.category_id = p_category_id
-    AND ods.dept_ready_at > NOW() - INTERVAL '2 hours'
-  FOR UPDATE;
+    AND ods.dept_ready_at > NOW() - INTERVAL '2 hours';
 
   v_result := GREATEST(
     NOW() + (v_base_prep || ' minutes')::INTERVAL,
@@ -234,60 +216,20 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-
-
-
-
--- Add updated_at to orders (powers the staff "Cooking X min" timer)
-  ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
-
-  CREATE OR REPLACE FUNCTION set_updated_at()
-  RETURNS TRIGGER AS $$
-  BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-  END;
-  $$ LANGUAGE plpgsql;
-
-  CREATE TRIGGER trg_orders_updated_at
-    BEFORE UPDATE ON orders
-    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
-  -- Prevent promo double-redemption under concurrent requests
-  ALTER TABLE promo_redemptions
-    ADD CONSTRAINT uq_promo_user UNIQUE (promo_id, user_id);
-
 -- ============================================
--- MIGRATION: switch to daily order numbering
--- Run this if orders table already exists with the old sequence approach
+-- RLS POLICIES
 -- ============================================
+-- Service role (used by all API routes) always bypasses RLS.
+-- Anon key (client-side reads) gets SELECT only — no writes.
 
-  -- Create the daily counter table
-  CREATE TABLE IF NOT EXISTS daily_order_counter (
-    business_date DATE PRIMARY KEY,
-    last_number   INTEGER NOT NULL DEFAULT 0
-  );
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE order_dept_slots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE promo_redemptions ENABLE ROW LEVEL SECURITY;
 
-  -- Replace the trigger function (same name, new logic)
-  CREATE OR REPLACE FUNCTION set_order_number()
-  RETURNS TRIGGER AS $$
-  DECLARE
-    v_business_date DATE;
-    v_order_number  INTEGER;
-  BEGIN
-    v_business_date := (NOW() AT TIME ZONE 'Asia/Singapore' - INTERVAL '4 hours')::DATE;
-
-    INSERT INTO daily_order_counter (business_date, last_number)
-    VALUES (v_business_date, 1)
-    ON CONFLICT (business_date) DO UPDATE
-      SET last_number = daily_order_counter.last_number + 1
-    RETURNING last_number INTO v_order_number;
-
-    NEW.order_number := v_order_number;
-    RETURN NEW;
-  END;
-  $$ LANGUAGE plpgsql;
-
-  -- The trigger name is unchanged so no need to drop/recreate it.
-  -- Optionally clean up the old sequence:
-  -- DROP SEQUENCE IF EXISTS order_number_seq;
+CREATE POLICY "public read" ON users FOR SELECT USING (true);
+CREATE POLICY "public read" ON orders FOR SELECT USING (true);
+CREATE POLICY "public read" ON order_items FOR SELECT USING (true);
+CREATE POLICY "public read" ON order_dept_slots FOR SELECT USING (true);
+CREATE POLICY "public read" ON promo_redemptions FOR SELECT USING (true);
