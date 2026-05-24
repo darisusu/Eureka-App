@@ -44,7 +44,7 @@ function SearchInner() {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <div className="mt-5 mb-2 flex flex-col gap-4 px-5">
           <div className="flex justify-between items-center gap-3">
             <div className="flex-1 bg-white border border-gray-200 rounded-2xl px-5 py-3">
@@ -61,13 +61,13 @@ function SearchInner() {
           <Filter categories={categories} />
         </div>
 
-        <div className="grid grid-cols-2 gap-7 px-5 pb-40">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 px-5 pb-40">
           {loading ? (
-            <p className="col-span-2 paragraph-medium text-gray-200 text-center py-8">
+            <p className="col-span-full paragraph-medium text-gray-200 text-center py-8">
               Loading...
             </p>
           ) : menu.length === 0 ? (
-            <p className="col-span-2 paragraph-medium text-gray-200 text-center py-8">
+            <p className="col-span-full paragraph-medium text-gray-200 text-center py-8">
               No results found.
             </p>
           ) : (
