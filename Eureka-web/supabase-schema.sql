@@ -245,3 +245,7 @@ CREATE POLICY "public read" ON categories FOR SELECT USING (true);
 CREATE POLICY "public read" ON dept_config FOR SELECT USING (true);
 CREATE POLICY "public read" ON menu FOR SELECT USING (true);
 CREATE POLICY "public read" ON promo_codes FOR SELECT USING (true);
+
+-- Internal system table — no client access needed
+-- Trigger fires from service-role INSERT on orders, which bypasses RLS anyway
+ALTER TABLE daily_order_counter ENABLE ROW LEVEL SECURITY;
