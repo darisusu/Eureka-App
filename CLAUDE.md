@@ -1,6 +1,6 @@
 # Eureka — Claude Code Context
 
-Eureka is a grab-and-go pre-order and prepay platform for high-volume food stalls. Customers browse a menu, add items to a cart, pay via Stripe before their order enters the kitchen queue, then track their order status on the home screen. Staff use a role-gated dashboard to move orders through a kanban board (Received → Preparing → Ready → Collected). The MVP explicitly excludes delivery, dine-in table management, in-store POS, and inventory management.
+Eureka is a grab-and-go pre-order and prepay platform for high-volume food stalls. Customers browse a menu, add items to a cart, and pay via Stripe before their order enters the kitchen queue. After payment, customers see an estimated wait time; recent orders are accessible from the profile page. Staff use a role-gated dashboard to move orders through a kanban board (Received → Preparing → Ready → Collected). The MVP explicitly excludes delivery, dine-in table management, in-store POS, and inventory management.
 
 ---
 

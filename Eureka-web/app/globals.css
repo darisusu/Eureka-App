@@ -139,6 +139,12 @@
     @apply text-3xl;
   }
 
+  .h2-bold {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    @apply text-4xl;
+  }
+
   .h3-bold {
     font-family: 'Quicksand', sans-serif;
     font-weight: 700;

@@ -1,56 +1,56 @@
 "use client";
 
+import CartDrawer from "@/components/CartDrawer";
 import CheckoutBar from "@/components/CheckoutBar";
 import { useCartStore } from "@/store/cart.store";
 import useAuthStore from "@/store/auth.store";
-import cn from "clsx";
-import { Search, ShoppingBag, User } from "lucide-react";
+import { ShoppingBag, User } from "lucide-react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
-const tabs = [
-  { href: "/search", label: "Menu", Icon: Search },
-  { href: "/cart", label: "Cart", Icon: ShoppingBag },
-  { href: "/profile", label: "Profile", Icon: User },
-];
-
-function TabNav() {
-  const pathname = usePathname();
+function TopNav({ onCartOpen }: { onCartOpen: () => void }) {
   const totalItems = useCartStore((s) => s.getTotalItems());
 
   return (
-    <nav className="fixed bottom-6 left-4 right-4 z-40 bg-white rounded-full shadow-lg shadow-black/10 px-4 py-3 flex items-center justify-around">
-      {tabs.map(({ href, label, Icon }) => {
-        const focused = pathname === href;
-        return (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              "flex flex-col items-center gap-1 px-3",
-              focused ? "text-primary" : "text-gray-400"
-            )}
+    <header className="fixed top-0 left-0 right-0 z-40 bg-white">
+      <div className="flex items-center justify-between px-5 py-3 max-w-5xl mx-auto">
+        <Link href="/search" className="flex items-center gap-0">
+          <span className="text-primary font-quicksand-bold text-3xl tracking-tight">EurekaGO</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/fish.png" alt="Eureka fish" className="h-[60px] w-auto object-contain -ml-4 mt-2" />
+        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onCartOpen}
+            className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-50 transition-colors"
+            aria-label="Cart"
           >
-            <div className="relative">
-              <Icon size={22} />
-              {label === "Cart" && totalItems > 0 && (
-                <span className="absolute -top-2 -right-2 flex items-center justify-center w-4 h-4 bg-primary text-white text-[10px] font-bold rounded-full">
-                  {totalItems}
-                </span>
-              )}
-            </div>
-            <span className="text-[10px] font-bold">{label}</span>
+            <ShoppingBag size={22} className="text-dark-100" />
+            {totalItems > 0 && (
+              <span className="absolute top-0.5 right-0.5 flex items-center justify-center w-4 h-4 bg-primary text-white text-[10px] font-bold rounded-full">
+                {totalItems > 9 ? "9+" : totalItems}
+              </span>
+            )}
+          </button>
+          <Link
+            href="/profile"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 hover:border-gray-300 transition-colors"
+            aria-label="Profile"
+          >
+            <User size={15} className="text-dark-100" />
+            <span className="body-medium text-dark-100">Profile</span>
           </Link>
-        );
-      })}
-    </nav>
+        </div>
+      </div>
+    </header>
   );
 }
 
 export default function TabLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user } = useAuthStore();
   const router = useRouter();
+  const [isCartOpen, setIsCartOpen] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -66,11 +66,12 @@ export default function TabLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      <TabNav />
-      <main className="flex-1 pb-32">
+      <TopNav onCartOpen={() => setIsCartOpen(true)} />
+      <main className="flex-1 pt-16 pb-20">
         {children}
       </main>
-      <CheckoutBar />
+      <CheckoutBar onOpen={() => setIsCartOpen(true)} />
+      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </div>
   );
 }

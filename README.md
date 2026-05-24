@@ -31,8 +31,8 @@ Next.js web app covering the full customer flow and staff dashboard.
 - Menu browsing with search and category filters
 - Cart with special requests and promo code redemption
 - Stripe payment via `<PaymentElement>` modal; webhook fallback for out-of-band confirmation
-- Queue-aware ETA: checkout populates `order_dept_slots` via the `calculate_dept_ready_at` DB function
-- Customer home: shows estimated wait time, switches to "ready for collection" card when staff marks order ready
+- Queue-aware ETA: checkout populates `order_dept_slots` via the `calculate_dept_ready_at` DB function; estimated wait time shown post-payment
+- Profile page: recent order history (up to 3 orders)
 - Staff kanban dashboard (Received → Preparing → Ready → Collected) with live polling
 
 ```bash

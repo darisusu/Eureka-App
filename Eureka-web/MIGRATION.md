@@ -38,7 +38,7 @@ Prefix changed from `EXPO_PUBLIC_` to `NEXT_PUBLIC_`. All variable names are oth
 
 ### Navigation / Layout
 - Mobile: bottom tab bar (floating pill, always visible)
-- Web: responsive layout — top navbar on desktop (md+), floating bottom tab bar on mobile
+- Web: floating bottom tab bar only — no desktop nav, no Home tab (tabs: Menu / Cart / Profile); `/` redirects to `/search` via middleware
 
 ---
 
@@ -71,6 +71,24 @@ These mobile-specific things were dropped and have no equivalent in the web proj
 - Sentry (`@sentry/react-native`) — not set up in web
 - All Expo packages — `expo`, `expo-router`, `expo-font`, `expo-splash-screen`, etc.
 - All React Native packages — `react-native`, `react-native-screens`, `react-native-safe-area-context`, etc.
+
+---
+
+## Post-Migration Changes (web-only, after initial port)
+
+Changes made to `Eureka-web` after the migration and the Appwrite → Supabase switch:
+
+| What changed | Detail |
+|---|---|
+| Backend | Appwrite → Supabase; cloud functions → Next.js API routes |
+| Auth | Email + password → phone-number lookup (no session); staff require PIN |
+| Phone normalisation | SG numbers normalised to `+65XXXXXXXX` on sign-in and sign-up |
+| Navigation | Removed Home tab; `/` redirects to `/search`; no desktop nav bar |
+| Customer order UX | Removed live order tracking screen; customers see ETA post-checkout and order history on the profile page |
+| Database | `orders.updated_at` column added (auto-update trigger `trg_orders_updated_at`) |
+| Promo integrity | `UNIQUE(promo_id, user_id)` constraint on `promo_redemptions` to prevent concurrent double-redemption |
+| Stripe webhook | `/api/webhooks/stripe` added as fallback for out-of-band payment confirmation |
+| ETA | Cart ETA dynamically fetched from `dept_config.max_wait_minutes` (was hardcoded) |
 
 ---
 

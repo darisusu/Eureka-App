@@ -67,7 +67,7 @@ export default function SignIn() {
 
   if (step === "pin") {
     return (
-      <div className="flex flex-col gap-10 bg-white rounded-lg p-5">
+      <div className="flex flex-col gap-8 bg-white rounded-lg">
         <CustomInput
           label="Staff PIN"
           placeholder="Enter your PIN"
@@ -91,7 +91,7 @@ export default function SignIn() {
   }
 
   return (
-    <div className="flex flex-col gap-10 bg-white rounded-lg p-5">
+    <div className="flex flex-col gap-8 bg-white rounded-lg">
       <CustomInput
         label="Phone number"
         placeholder="Enter your phone number"
