@@ -76,7 +76,7 @@ function StripeRedirectInner() {
         // Always clear the cart — Stripe has charged the customer.
         clearCart();
         setStatus("success");
-        setTimeout(() => router.replace("/"), 1500);
+        setTimeout(() => router.replace(`/order/${orderId}`), 1500);
       }
     };
 

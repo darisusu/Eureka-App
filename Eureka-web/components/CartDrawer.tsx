@@ -436,7 +436,7 @@ export default function CartDrawer({
         clearCart();
         onClose();
         toast.success(`Order placed! Your order number is ${checkout.orderNumber}.`);
-        router.replace("/search");
+        router.replace(`/order/${checkout.orderId}`);
         return;
       }
 
@@ -479,7 +479,7 @@ export default function CartDrawer({
     setPendingCheckout(null);
     onClose();
     toast.success(`Payment successful! Order ${orderNumber} placed.`);
-    router.replace("/search");
+    router.replace(`/order/${orderId}`);
   };
 
   const isLocked = isSubmitting || !!clientSecret;
@@ -499,17 +499,13 @@ export default function CartDrawer({
       {/* Drawer panel */}
       <div
         className={cn(
-          "relative fixed right-0 top-0 bottom-0 w-full max-w-md bg-white z-50 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out",
+          "fixed right-0 top-0 bottom-0 w-full max-w-md bg-white z-50 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out",
           isOpen ? "translate-x-0" : "translate-x-full"
         )}
         aria-label="Cart"
         role="dialog"
         aria-modal="true"
       >
-        {/* Interaction lock overlay — blocks all clicks while checkout is being created */}
-        {isSubmitting && (
-          <div className="absolute inset-0 z-[55] cursor-wait" aria-hidden="true" />
-        )}
         {/* Drawer header */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 shrink-0">
           <button

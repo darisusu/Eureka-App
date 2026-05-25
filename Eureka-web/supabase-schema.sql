@@ -189,6 +189,7 @@ DECLARE
   v_max_wait INTEGER;
   v_has_queue BOOLEAN;
   v_result TIMESTAMPTZ;
+  v_active_count INTEGER;
 BEGIN
   SELECT has_queue INTO v_has_queue FROM categories WHERE id = p_category_id;
 
@@ -210,12 +211,29 @@ BEGIN
     RETURN NOW() + (v_base_prep || ' minutes')::INTERVAL;
   END IF;
 
-  SELECT MAX(ods.dept_ready_at) INTO v_last_ready
+  -- Count orders still occupying the kitchen (not yet cooked).
+  -- Their original slot times may be stale, so we project the queue
+  -- forward from now instead of chaining off expired timestamps.
+  SELECT COUNT(*) INTO v_active_count
   FROM order_dept_slots ods
   JOIN orders o ON o.id = ods.order_id
   WHERE ods.category_id = p_category_id
     AND o.is_paid = true
-    AND ods.dept_ready_at > NOW() - INTERVAL '2 hours';
+    AND o.status IN ('received', 'preparing');
+
+  IF v_active_count > 0 THEN
+    -- Position the last active order at NOW + base_prep + (count-1)*gap,
+    -- then the new order slots after it.
+    v_last_ready := NOW() + ((v_base_prep + (v_active_count - 1) * v_gap) || ' minutes')::INTERVAL;
+  ELSE
+    -- No backlog: chain off the most recent completed slot (within 2 hours).
+    SELECT MAX(ods.dept_ready_at) INTO v_last_ready
+    FROM order_dept_slots ods
+    JOIN orders o ON o.id = ods.order_id
+    WHERE ods.category_id = p_category_id
+      AND o.is_paid = true
+      AND ods.dept_ready_at > NOW() - INTERVAL '2 hours';
+  END IF;
 
   v_result := GREATEST(
     NOW() + (v_base_prep || ' minutes')::INTERVAL,
