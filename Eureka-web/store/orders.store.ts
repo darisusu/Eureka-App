@@ -1,8 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { OrderHistoryEntry, OrderStatus } from "@/type";
-
-export const RECENT_ORDERS_LIMIT = 5;
+import { RECENT_ORDERS_LIMIT } from "@/lib/config";
 
 type OrdersState = {
     recentOrders: OrderHistoryEntry[];

@@ -1,7 +1,6 @@
+import { TABLE_ORDERS, VALID_ORDER_STATUSES } from "@/lib/config";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
-
-const VALID_STATUSES = ["pending_payment", "paid", "received", "preparing", "ready", "collected", "cancelled"];
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,12 +17,12 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ ok: false, message: "orderId and status are required." }, { status: 400 });
         }
 
-        if (!VALID_STATUSES.includes(status)) {
+        if (!(VALID_ORDER_STATUSES as readonly string[]).includes(status)) {
             return NextResponse.json({ ok: false, message: "Invalid status." }, { status: 400 });
         }
 
         const { error } = await supabase
-            .from("orders")
+            .from(TABLE_ORDERS)
             .update({ status })
             .eq("id", orderId);
 

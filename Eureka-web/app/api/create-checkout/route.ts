@@ -1,3 +1,13 @@
+import {
+    ORDER_NUMBER_PAD_LENGTH,
+    RPC_CALCULATE_DEPT_READY_AT,
+    TABLE_MENU,
+    TABLE_ORDER_DEPT_SLOTS,
+    TABLE_ORDER_ITEMS,
+    TABLE_ORDERS,
+    TABLE_PROMO_CODES,
+    TABLE_PROMO_REDEMPTIONS,
+} from "@/lib/config";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
@@ -21,7 +31,7 @@ const populateDeptSlots = async (
 
     for (const categoryId of categoryIds) {
         const { data: readyAt } = await supabaseClient
-            .rpc("calculate_dept_ready_at", { p_category_id: categoryId });
+            .rpc(RPC_CALCULATE_DEPT_READY_AT, { p_category_id: categoryId });
         if (readyAt) {
             slots.push({ order_id: orderId, category_id: categoryId, dept_ready_at: readyAt as string });
         }
@@ -29,13 +39,13 @@ const populateDeptSlots = async (
 
     if (!slots.length) return null;
 
-    await supabaseClient.from("order_dept_slots").insert(slots);
+    await supabaseClient.from(TABLE_ORDER_DEPT_SLOTS).insert(slots);
 
     const maxReadyAt = slots.reduce(
         (max, s) => (s.dept_ready_at > max ? s.dept_ready_at : max),
         slots[0].dept_ready_at
     );
-    await supabaseClient.from("orders").update({ ready_at: maxReadyAt }).eq("id", orderId);
+    await supabaseClient.from(TABLE_ORDERS).update({ ready_at: maxReadyAt }).eq("id", orderId);
     return maxReadyAt;
 };
 

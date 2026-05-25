@@ -1,5 +1,6 @@
 "use client";
 
+import { POST_PAYMENT_REDIRECT_DELAY_MS } from "@/lib/config";
 import { confirmCheckoutPayment } from "@/lib/supabase";
 import useAuthStore from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
@@ -14,7 +15,7 @@ function StripeRedirectInner() {
   const { user } = useAuthStore();
   const { clearCart, items, setCartOpen } = useCartStore();
   const addRecentOrder = useOrdersStore((state) => state.addRecentOrder);
-  const [status, setStatus] = useState<"processing" | "success">("processing");
+  const [status, setStatus] = useState<"processing" | "success" | "failed">("processing");
   const ran = useRef(false);
 
   useEffect(() => {
@@ -26,8 +27,11 @@ function StripeRedirectInner() {
     const redirectStatus = searchParams.get("redirect_status");
 
     if (redirectStatus !== "succeeded" || !paymentIntent || !orderId) {
-      setCartOpen(true);
-      router.replace("/search");
+      setStatus("failed");
+      setTimeout(() => {
+        setCartOpen(true);
+        router.replace("/search");
+      }, 2500);
       return;
     }
 
@@ -76,7 +80,7 @@ function StripeRedirectInner() {
         // Always clear the cart — Stripe has charged the customer.
         clearCart();
         setStatus("success");
-        setTimeout(() => router.replace(`/order/${orderId}`), 1500);
+        setTimeout(() => router.replace(`/order/${orderId}`), POST_PAYMENT_REDIRECT_DELAY_MS);
       }
     };
 
@@ -96,6 +100,14 @@ function StripeRedirectInner() {
         <>
           <div className="text-5xl">✅</div>
           <p className="paragraph-semibold text-dark-100">Payment confirmed! Redirecting...</p>
+        </>
+      )}
+
+      {status === "failed" && (
+        <>
+          <div className="text-5xl">❌</div>
+          <p className="paragraph-semibold text-dark-100">Payment was not completed.</p>
+          <p className="paragraph-regular text-gray-400">Returning you to your cart...</p>
         </>
       )}
 

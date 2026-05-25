@@ -1,22 +1,11 @@
 "use client";
 
+import { ACTIVE_ORDER_STATUSES, STATUS_CONFIG } from "@/lib/config";
 import { getOrderDetail } from "@/lib/supabase";
-import type { OrderDetail, OrderStatus } from "@/type";
+import type { OrderDetail } from "@/type";
 import { ArrowLeft, Clock } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-
-const STATUS_CONFIG: Record<OrderStatus, { label: string; textColor: string; bgColor: string }> = {
-  received:        { label: "Received",         textColor: "text-primary",   bgColor: "bg-primary/10" },
-  preparing:       { label: "Preparing",         textColor: "text-primary",   bgColor: "bg-primary/20" },
-  ready:           { label: "Ready for Pickup",  textColor: "text-success",   bgColor: "bg-success/10" },
-  collected:       { label: "Collected",         textColor: "text-gray-100",  bgColor: "bg-dark-100/5" },
-  cancelled:       { label: "Cancelled",         textColor: "text-error",     bgColor: "bg-error/10"   },
-  pending_payment: { label: "Pending",           textColor: "text-gray-100",  bgColor: "bg-dark-100/5" },
-  paid:            { label: "Paid",              textColor: "text-gray-100",  bgColor: "bg-dark-100/5" },
-};
-
-const ACTIVE_STATUSES: OrderStatus[] = ["received", "preparing", "ready"];
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -71,7 +60,7 @@ export default function OrderDetailPage() {
   const statusCfg = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.received;
   const hasDiscount = order.discountCents > 0;
   const subtotalCents = Math.round(order.total * 100) + order.discountCents;
-  const showReadyBanner = order.readyAt && ACTIVE_STATUSES.includes(order.status);
+  const showReadyBanner = order.readyAt && ACTIVE_ORDER_STATUSES.includes(order.status);
 
   const formatReadyAt = (iso: string) =>
     new Date(iso).toLocaleTimeString("en-SG", { hour: "2-digit", minute: "2-digit" });

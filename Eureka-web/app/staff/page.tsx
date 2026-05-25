@@ -1,6 +1,7 @@
 "use client";
 
 import CustomButton from "@/components/CustomButton";
+import { STAFF_ACTIVE_ORDERS_POLL_MS, STAFF_HISTORY_POLL_MS } from "@/lib/config";
 import {
   getActiveOrders,
   getCollectedOrders,
@@ -68,7 +69,7 @@ export default function StaffScreen() {
   useEffect(() => {
     const isMounted = { current: true };
     void fetchActiveOrders(isMounted);
-    const interval = setInterval(() => fetchActiveOrders(isMounted), 10000);
+    const interval = setInterval(() => fetchActiveOrders(isMounted), STAFF_ACTIVE_ORDERS_POLL_MS);
     return () => {
       isMounted.current = false;
       clearInterval(interval);
@@ -78,7 +79,7 @@ export default function StaffScreen() {
   useEffect(() => {
     const isMounted = { current: true };
     void fetchHistoryOrders(isMounted);
-    const interval = setInterval(() => fetchHistoryOrders(isMounted), 15000);
+    const interval = setInterval(() => fetchHistoryOrders(isMounted), STAFF_HISTORY_POLL_MS);
     return () => {
       isMounted.current = false;
       clearInterval(interval);

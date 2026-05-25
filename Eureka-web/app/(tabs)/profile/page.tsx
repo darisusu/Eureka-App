@@ -1,35 +1,15 @@
 "use client";
 
 import CustomButton from "@/components/CustomButton";
+import { RECENT_ORDERS_LIMIT, STATUS_CONFIG } from "@/lib/config";
 import { getRecentOrders } from "@/lib/supabase";
 import useAuthStore from "@/store/auth.store";
-import useOrdersStore, { RECENT_ORDERS_LIMIT } from "@/store/orders.store";
-import type { OrderStatus } from "@/type";
+import useOrdersStore from "@/store/orders.store";
 import { ArrowLeft, ChevronRight, LogOut } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-
-const STATUS_LABEL: Record<OrderStatus, string> = {
-  received:        "Received",
-  preparing:       "Preparing",
-  ready:           "Ready",
-  collected:       "Collected",
-  cancelled:       "Cancelled",
-  pending_payment: "Pending",
-  paid:            "Paid",
-};
-
-const STATUS_STYLE: Record<OrderStatus, string> = {
-  received:        "bg-primary/10 text-primary",
-  preparing:       "bg-primary/20 text-primary",
-  ready:           "bg-success/10 text-success",
-  collected:       "bg-dark-100/5 text-gray-100",
-  cancelled:       "bg-error/10 text-error",
-  pending_payment: "bg-dark-100/5 text-gray-100",
-  paid:            "bg-dark-100/5 text-gray-100",
-};
 
 export default function Profile() {
   const router = useRouter();
@@ -100,36 +80,39 @@ export default function Profile() {
             ) : recentOrders.length === 0 ? (
               <p className="paragraph-medium text-gray-200">No recent orders yet.</p>
             ) : (
-              recentOrders.map((order) => (
-                <Link
-                  key={order.orderId}
-                  href={`/order/${order.orderId}`}
-                  className="block border border-gray-200 rounded-2xl p-4 bg-white hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer"
-                >
-                  <div className="flex justify-between items-center gap-2">
-                    <span className="paragraph-bold text-dark-100">
-                      #{order.orderNumber}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <span className="body-regular text-gray-100">
-                        {order.dateLabel}
+              recentOrders.map((order) => {
+                const statusCfg = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending_payment;
+                return (
+                  <Link
+                    key={order.orderId}
+                    href={`/order/${order.orderId}`}
+                    className="block border border-gray-200 rounded-2xl p-4 bg-white hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer"
+                  >
+                    <div className="flex justify-between items-center gap-2">
+                      <span className="paragraph-bold text-dark-100">
+                        #{order.orderNumber}
                       </span>
-                      <ChevronRight size={15} className="text-gray-100 flex-shrink-0" />
+                      <div className="flex items-center gap-1.5">
+                        <span className="body-regular text-gray-100">
+                          {order.dateLabel}
+                        </span>
+                        <ChevronRight size={15} className="text-gray-100 flex-shrink-0" />
+                      </div>
                     </div>
-                  </div>
-                  <p className="body-regular text-gray-100 mt-2 line-clamp-1">
-                    {order.itemsSummary}
-                  </p>
-                  <div className="flex justify-between items-center mt-3">
-                    <span className="paragraph-bold text-dark-100">
-                      ${order.total.toFixed(2)}
-                    </span>
-                    <span className={`small-bold px-2.5 py-1 rounded-full ${STATUS_STYLE[order.status] ?? "bg-dark-100/5 text-gray-100"}`}>
-                      {STATUS_LABEL[order.status] ?? order.status}
-                    </span>
-                  </div>
-                </Link>
-              ))
+                    <p className="body-regular text-gray-100 mt-2 line-clamp-1">
+                      {order.itemsSummary}
+                    </p>
+                    <div className="flex justify-between items-center mt-3">
+                      <span className="paragraph-bold text-dark-100">
+                        ${order.total.toFixed(2)}
+                      </span>
+                      <span className={`small-bold px-2.5 py-1 rounded-full ${statusCfg.bgColor} ${statusCfg.textColor}`}>
+                        {statusCfg.label}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })
             )}
           </div>
         </div>

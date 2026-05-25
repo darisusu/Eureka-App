@@ -2,7 +2,7 @@
 
 import CartItem from "@/components/CartItem";
 import CustomButton from "@/components/CustomButton";
-import { calculateCartTotals, createCheckout } from "@/lib/supabase";
+import { calculateCartTotals, confirmCheckoutPayment, createCheckout } from "@/lib/supabase";
 import useAuthStore from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
 import useOrdersStore from "@/store/orders.store";
@@ -100,13 +100,13 @@ function CheckoutForm({
   orderId,
   orderNumber,
   totalCents,
-  onSuccess,
+  onPaymentIntentSuccess,
   onCancel,
 }: {
   orderId: string;
   orderNumber: string;
   totalCents: number;
-  onSuccess: (orderId: string, orderNumber: string, totalCents: number) => void;
+  onPaymentIntentSuccess: (paymentIntentId: string) => Promise<void>;
   onCancel: () => void;
 }) {
   const stripe = useStripe();
@@ -120,15 +120,20 @@ function CheckoutForm({
     setIsProcessing(true);
     try {
       const returnUrl = `${window.location.origin}/stripe-redirect?order_id=${orderId}&order_number=${encodeURIComponent(orderNumber)}`;
-      const { error } = await stripe.confirmPayment({
+      const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: { return_url: returnUrl },
+        redirect: "if_required",
       });
 
       if (error) {
         if (error.type !== "validation_error") {
           toast.error(error.message ?? "Payment failed.");
         }
+      } else if (paymentIntent?.status === "succeeded") {
+        // Payment confirmed inline (no redirect required — e.g. card payment).
+        // Confirm on our backend to mark the order received before showing success.
+        await onPaymentIntentSuccess(paymentIntent.id);
       }
     } finally {
       setIsProcessing(false);
@@ -464,7 +469,8 @@ export default function CartDrawer({
   const handlePaymentSuccess = (
     orderId: string,
     orderNumber: string,
-    totalCents: number
+    totalCents: number,
+    readyAt?: string,
   ) => {
     addRecentOrder({
       orderId,
@@ -475,6 +481,7 @@ export default function CartDrawer({
       itemsSummary: items.length
         ? items.map((i) => `${i.quantity}x ${i.name}`).join(", ")
         : "Items unavailable",
+      readyAt,
     });
     clearCart();
     setClientSecret(null);
@@ -482,6 +489,25 @@ export default function CartDrawer({
     onClose();
     toast.success(`Payment successful! Order ${orderNumber} placed.`);
     router.replace(`/order/${orderId}`);
+  };
+
+  const handlePaymentIntentSuccess = async (paymentIntentId: string) => {
+    if (!user?.id || !pendingCheckout) return;
+    try {
+      const confirmation = await confirmCheckoutPayment({
+        userId: user.id,
+        orderId: pendingCheckout.orderId,
+        paymentIntentId,
+      });
+      handlePaymentSuccess(
+        pendingCheckout.orderId,
+        pendingCheckout.orderNumber,
+        pendingCheckout.totalCents,
+        confirmation.readyAt,
+      );
+    } catch {
+      toast.error("Payment was processed but order confirmation failed. Please contact support.");
+    }
   };
 
   const isLocked = isSubmitting || !!clientSecret;
@@ -533,7 +559,7 @@ export default function CartDrawer({
                     orderId={pendingCheckout.orderId}
                     orderNumber={pendingCheckout.orderNumber}
                     totalCents={pendingCheckout.totalCents}
-                    onSuccess={handlePaymentSuccess}
+                    onPaymentIntentSuccess={handlePaymentIntentSuccess}
                     onCancel={() => {
                       setClientSecret(null);
                       setPendingCheckout(null);
