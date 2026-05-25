@@ -1,3 +1,4 @@
+import { TABLE_USERS } from "@/lib/config";
 import { createClient } from "@supabase/supabase-js";
 import bcryptjs from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
         }
 
         const { data, error } = await supabase
-            .from("users")
+            .from(TABLE_USERS)
             .select("id, name, phone, role, pin_hash")
             .eq("phone", phone)
             .maybeSingle();

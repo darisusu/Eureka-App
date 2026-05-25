@@ -81,12 +81,12 @@ Standard Appwrite Auth: `account.create()` registers an account, `account.create
 - Pre-checkout ETA: `POST /api/estimate-eta` called from the cart drawer to show estimated wait before checkout
 - Promo code redemption: validated server-side via `/api/calculate-cart`; `PERCENT` and `FIXED` types, per-user usage limit, min subtotal, max discount cap; race condition protected by `UNIQUE(promo_id, user_id)` DB constraint
 - Checkout: `/api/create-checkout` creates order + Stripe PaymentIntent + `order_dept_slots` (via `calculate_dept_ready_at` RPC); if `totalCents === 0` order is marked received immediately; returns `readyAt`
-- Stripe payment: `<PaymentElement>` rendered inside the `CartDrawer`, redirects through `/stripe-redirect` on completion
-- Stripe webhook: `/api/webhooks/stripe` handles `payment_intent.succeeded` as fallback if customer closes browser before redirect
-- Post-payment confirmation: `/api/create-checkout` with `action: "confirm"` verifies PaymentIntent, sets order to `"received"`, returns `readyAt` from `order_dept_slots`
+- Stripe payment: `<PaymentElement>` rendered inside the `CartDrawer`; uses `redirect: "if_required"` so card payments confirm inline without a page redirect; non-card methods (bank redirect, etc.) open `/stripe-redirect` on completion
+- Stripe webhook: `/api/webhooks/stripe` handles `payment_intent.succeeded` as fallback if the customer closes the browser before redirect
+- Post-payment confirmation: `/api/create-checkout` with `action: "confirm"` verifies PaymentIntent, sets order to `"received"`, returns `readyAt` from `order_dept_slots`; `/stripe-redirect` handles three states: **success** (navigates to order detail after `POST_PAYMENT_REDIRECT_DELAY_MS`), **failure** (shows error UI and reopens cart after the same delay), and **3D Secure popup** (detects `window.opener` — the issuer auth tab opened by Stripe — closes itself with a friendly message so the original tab handles confirmation)
 - Navigation: middleware redirects `/` → `/search`; fixed top nav bar with EurekaGO branding (fish logo), dynamic cart pill, and Profile link — no bottom tab bar, no desktop sidebar
 - Customer order tracking: **removed from the customer UI**; the home screen (`/`) is no longer customer-facing (redirects to `/search`)
-- Profile screen: displays name and phone; "Back to Menu" link to `/search`; shows up to 3 recent paid orders fetched from Supabase on load (stored in orders store, trimmed to `RECENT_ORDERS_LIMIT = 3`); each order is a clickable card linking to `/order/[id]`
+- Profile screen: displays name and phone; "Back to Menu" link to `/search`; shows up to `RECENT_ORDERS_LIMIT` recent paid orders fetched from Supabase on load (stored in orders store, trimmed to that limit); each order is a clickable card linking to `/order/[id]`
 - Order detail page (`/order/[id]`): shows order number, colour-coded status badge, ready-by banner (visible when status is `received`, `preparing`, or `ready`), itemised line items with qty and special requests, price breakdown (subtotal + promo discount + total paid); accessible from the profile page
 - Staff dashboard: three-column kanban (Received / Preparing / Ready); role-gated (redirects non-staff); optimistic status updates with error rollback; polls every 10 s for active orders and every 15 s for history; "Cooking X min" timer uses `updated_at`; History tab (collected orders); Settings tab with sign-out
 
@@ -163,10 +163,12 @@ STRIPE_CURRENCY
 
 **Customer order UX is intentionally minimal.** Customers see estimated wait time and a "ready for collection" banner — no intermediate status steps. No cancel button is exposed to customers; orders can only be cancelled by editing the DB directly.
 
-**Staff polling, not Realtime.** Web polls Supabase every 10 s for active orders and every 15 s for history.
+**All tuneable constants live in `lib/config.ts`.** This is the single source of truth for values like `RECENT_ORDERS_LIMIT`, polling intervals, query limits, order number padding, and the fallback `DEFAULT_DEPT_MAX_WAIT_MINUTES`. Supabase table names and the `calculate_dept_ready_at` RPC name are also exported from there. DB-only settings (dept_config values, daily reset trigger, RLS) are documented with comments in the same file.
+
+**Staff polling, not Realtime.** Web polls Supabase every `STAFF_ACTIVE_ORDERS_POLL_MS` (default 10 s) for active orders and every `STAFF_HISTORY_POLL_MS` (default 15 s) for history. Both are in `lib/config.ts`.
 
 **Cart is not persisted.** `cart.store.ts` is plain Zustand with no `persist` middleware — cart is lost on page refresh.
 
-**Orders store IS persisted.** `orders.store.ts` uses Zustand `persist` to localStorage (`name: "recent-orders"`) to keep up to `RECENT_ORDERS_LIMIT = 3` orders across sessions.
+**Orders store IS persisted.** `orders.store.ts` uses Zustand `persist` to localStorage (`name: "recent-orders"`) to keep up to `RECENT_ORDERS_LIMIT` orders across sessions. The limit is defined in `lib/config.ts`.
 
 **Each app has its own seed script.** `Eureka-web/lib/seed.ts` targets Supabase (seeds Drinks / Porridge / Fish Soup categories with matching menu items); run with `npx tsx --env-file=.env.local lib/seed.ts`. `Eureka-mobile/lib/seed.ts` + `lib/data.ts` target Appwrite; run with `npx tsx lib/seed.ts`. Never run either against production.

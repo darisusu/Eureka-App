@@ -1,3 +1,4 @@
+import { TABLE_ORDERS, TABLE_PROMO_REDEMPTIONS } from "@/lib/config";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
         const pi = event.data.object as Stripe.PaymentIntent;
 
         const { data: order, error } = await supabase
-            .from("orders")
+            .from(TABLE_ORDERS)
             .select("id, user_id, is_paid, status, promo_id, discount_cents")
             .eq("payment_intent_id", pi.id)
             .maybeSingle();
@@ -42,18 +43,18 @@ export async function POST(req: NextRequest) {
 
         if (!order.is_paid) {
             await supabase
-                .from("orders")
+                .from(TABLE_ORDERS)
                 .update({ is_paid: true, status: "received" })
                 .eq("id", order.id);
 
             if (order.promo_id) {
                 const { count } = await supabase
-                    .from("promo_redemptions")
+                    .from(TABLE_PROMO_REDEMPTIONS)
                     .select("id", { count: "exact", head: true })
                     .eq("order_id", order.id);
 
                 if ((count ?? 0) === 0) {
-                    await supabase.from("promo_redemptions").insert({
+                    await supabase.from(TABLE_PROMO_REDEMPTIONS).insert({
                         promo_id: order.promo_id,
                         user_id: order.user_id,
                         order_id: order.id,

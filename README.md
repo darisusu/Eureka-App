@@ -33,7 +33,7 @@ Next.js web app covering the full customer flow and staff dashboard.
 - Stripe payment via `<PaymentElement>` inside the cart drawer; webhook fallback for out-of-band confirmation
 - Queue-aware ETA: checkout populates `order_dept_slots` via the `calculate_dept_ready_at` DB function; estimated wait time shown post-payment
 - Daily order numbering: `order_number` resets each day at 4am SGT
-- Profile page: recent order history (up to 3 orders)
+- Profile page: recent order history (up to 5 orders, configurable via `RECENT_ORDERS_LIMIT` in `lib/config.ts`)
 - Staff kanban dashboard (Received → Preparing → Ready → Collected) with live polling
 
 ```bash

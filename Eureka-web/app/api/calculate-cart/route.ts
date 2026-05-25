@@ -1,3 +1,4 @@
+import { TABLE_MENU, TABLE_PROMO_CODES, TABLE_PROMO_REDEMPTIONS } from "@/lib/config";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
         }
 
         const { data: menuRows, error: menuError } = await supabase
-            .from("menu")
+            .from(TABLE_MENU)
             .select("id, price")
             .in("id", menuIds);
 
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
             }
 
             const { data: promoRow } = await supabase
-                .from("promo_codes")
+                .from(TABLE_PROMO_CODES)
                 .select("*")
                 .eq("code_upper", promoCode)
                 .maybeSingle();
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
 
             if ((promoRow.usage_limit_per_user ?? 0) > 0) {
                 const { count } = await supabase
-                    .from("promo_redemptions")
+                    .from(TABLE_PROMO_REDEMPTIONS)
                     .select("id", { count: "exact", head: true })
                     .eq("promo_id", promoRow.id)
                     .eq("user_id", userId);

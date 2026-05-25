@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
             }
 
             const { data: order, error: orderErr } = await supabase
-                .from("orders")
+                .from(TABLE_ORDERS)
                 .select("id, user_id, is_paid, status, promo_id, discount_cents, payment_intent_id")
                 .eq("id", orderId)
                 .single();
@@ -94,15 +94,15 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ ok: false, message: `Payment not completed. Status: ${paymentIntent.status}` }, { status: 400 });
             }
 
-            await supabase.from("orders").update({ is_paid: true, status: "received" }).eq("id", orderId);
+            await supabase.from(TABLE_ORDERS).update({ is_paid: true, status: "received" }).eq("id", orderId);
 
             if (order.promo_id) {
                 const { count } = await supabase
-                    .from("promo_redemptions")
+                    .from(TABLE_PROMO_REDEMPTIONS)
                     .select("id", { count: "exact", head: true })
                     .eq("order_id", orderId);
                 if ((count ?? 0) === 0) {
-                    const { error: promoInsertErr } = await supabase.from("promo_redemptions").insert({
+                    const { error: promoInsertErr } = await supabase.from(TABLE_PROMO_REDEMPTIONS).insert({
                         promo_id: order.promo_id,
                         user_id: order.user_id,
                         order_id: orderId,
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
             }
 
             const { data: slotData } = await supabase
-                .from("order_dept_slots")
+                .from(TABLE_ORDER_DEPT_SLOTS)
                 .select("dept_ready_at")
                 .eq("order_id", orderId);
             const readyAt = slotData?.length
@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
 
         const menuIds = [...new Set(items.map(i => i.menuId).filter(Boolean))] as string[];
         const { data: menuRows, error: menuError } = await supabase
-            .from("menu")
+            .from(TABLE_MENU)
             .select("id, name, price, category_id")
             .in("id", menuIds);
 
@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
 
         if (promoCode) {
             const { data: promoRow } = await supabase
-                .from("promo_codes")
+                .from(TABLE_PROMO_CODES)
                 .select("*")
                 .eq("code_upper", promoCode)
                 .maybeSingle();
@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
 
             if ((promoRow.usage_limit_per_user ?? 0) > 0) {
                 const { count } = await supabase
-                    .from("promo_redemptions")
+                    .from(TABLE_PROMO_REDEMPTIONS)
                     .select("id", { count: "exact", head: true })
                     .eq("promo_id", promoRow.id)
                     .eq("user_id", userId);
@@ -211,7 +211,7 @@ export async function POST(req: NextRequest) {
         // ── Free order — no Stripe step ────────────────────────────────────────
         if (totalCents === 0) {
             const { data: orderDoc, error: insertErr } = await supabase
-                .from("orders")
+                .from(TABLE_ORDERS)
                 .insert({
                     user_id: userId,
                     status: "received",
@@ -227,10 +227,10 @@ export async function POST(req: NextRequest) {
             if (insertErr || !orderDoc) return NextResponse.json({ ok: false, message: "Failed to create order." }, { status: 500 });
 
             const itemsForInsert = orderItemsPayload.map(({ categoryId: _c, ...i }) => ({ ...i, order_id: orderDoc.id }));
-            await supabase.from("order_items").insert(itemsForInsert);
+            await supabase.from(TABLE_ORDER_ITEMS).insert(itemsForInsert);
 
             if (promo) {
-                const { error: promoInsertErr } = await supabase.from("promo_redemptions").insert({
+                const { error: promoInsertErr } = await supabase.from(TABLE_PROMO_REDEMPTIONS).insert({
                     promo_id: promo.promoId,
                     user_id: userId,
                     order_id: orderDoc.id,
@@ -247,7 +247,7 @@ export async function POST(req: NextRequest) {
                 ok: true,
                 data: {
                     orderId: orderDoc.id,
-                    orderNumber: String(orderDoc.order_number).padStart(5, "0"),
+                    orderNumber: String(orderDoc.order_number).padStart(ORDER_NUMBER_PAD_LENGTH, "0"),
                     paymentRequired: false,
                     paymentIntentId: null,
                     clientSecret: null,
@@ -269,7 +269,7 @@ export async function POST(req: NextRequest) {
         });
 
         const { data: orderDoc, error: insertErr } = await supabase
-            .from("orders")
+            .from(TABLE_ORDERS)
             .insert({
                 user_id: userId,
                 status: "pending_payment",
@@ -289,7 +289,7 @@ export async function POST(req: NextRequest) {
         }
 
         const itemsForInsert = orderItemsPayload.map(({ categoryId: _c, ...i }) => ({ ...i, order_id: orderDoc.id }));
-        await supabase.from("order_items").insert(itemsForInsert);
+        await supabase.from(TABLE_ORDER_ITEMS).insert(itemsForInsert);
 
         const readyAt = await populateDeptSlots(supabase, orderDoc.id, uniqueCategoryIds).catch(() => null);
 
@@ -297,7 +297,7 @@ export async function POST(req: NextRequest) {
             ok: true,
             data: {
                 orderId: orderDoc.id,
-                orderNumber: String(orderDoc.order_number).padStart(5, "0"),
+                orderNumber: String(orderDoc.order_number).padStart(ORDER_NUMBER_PAD_LENGTH, "0"),
                 paymentRequired: true,
                 paymentIntentId: paymentIntent.id,
                 clientSecret: paymentIntent.client_secret,
