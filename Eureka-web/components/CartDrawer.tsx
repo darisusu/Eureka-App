@@ -482,6 +482,8 @@ export default function CartDrawer({
     router.replace("/search");
   };
 
+  const isLocked = isSubmitting || !!clientSecret;
+
   return (
     <>
       {/* Backdrop */}
@@ -490,7 +492,7 @@ export default function CartDrawer({
           "fixed inset-0 bg-black/40 z-40 transition-opacity duration-300",
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
-        onClick={onClose}
+        onClick={isLocked ? undefined : onClose}
         aria-hidden="true"
       />
 
@@ -507,8 +509,9 @@ export default function CartDrawer({
         {/* Drawer header */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 shrink-0">
           <button
-            onClick={onClose}
-            className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 transition-colors"
+            onClick={isLocked ? undefined : onClose}
+            disabled={isLocked}
+            className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             aria-label="Close cart"
           >
             <ArrowLeft size={20} className="text-dark-100" />

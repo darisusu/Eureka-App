@@ -4,18 +4,17 @@ import { confirmCheckoutPayment } from "@/lib/supabase";
 import useAuthStore from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
 import useOrdersStore from "@/store/orders.store";
+
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 
 function StripeRedirectInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuthStore();
-  const { clearCart, items } = useCartStore();
+  const { clearCart, items, setCartOpen } = useCartStore();
   const addRecentOrder = useOrdersStore((state) => state.addRecentOrder);
-  const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
-  const [errorMsg, setErrorMsg] = useState("");
+  const [status, setStatus] = useState<"processing" | "success">("processing");
   const ran = useRef(false);
 
   useEffect(() => {
@@ -27,8 +26,8 @@ function StripeRedirectInner() {
     const redirectStatus = searchParams.get("redirect_status");
 
     if (redirectStatus !== "succeeded" || !paymentIntent || !orderId) {
-      setStatus("error");
-      setErrorMsg("Payment verification failed. Please contact staff with your order reference.");
+      setCartOpen(true);
+      router.replace("/search");
       return;
     }
 
@@ -100,18 +99,6 @@ function StripeRedirectInner() {
         </>
       )}
 
-      {status === "error" && (
-        <>
-          <div className="text-5xl">❌</div>
-          <p className="paragraph-semibold text-dark-100">{errorMsg}</p>
-          <Link
-            href="/search"
-            className="bg-primary text-white rounded-full px-6 py-3 font-bold"
-          >
-            Back to cart
-          </Link>
-        </>
-      )}
     </div>
   );
 }

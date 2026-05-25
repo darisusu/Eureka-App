@@ -12,8 +12,10 @@ export const useCartStore = create<CartStore>()(
         (set, get) => ({
             items: [],
             appliedPromo: null,
+            isCartOpen: false,
 
             setAppliedPromo: (promo) => set({ appliedPromo: promo }),
+            setCartOpen: (open) => set({ isCartOpen: open }),
 
             addItem: (item) => {
                 const normalizedRequest = normalizeRequest(item.specialRequest);
@@ -95,6 +97,7 @@ export const useCartStore = create<CartStore>()(
         {
             name: "eureka-cart",
             storage: createJSONStorage(() => sessionStorage),
+            partialize: (state) => ({ items: state.items, appliedPromo: state.appliedPromo }),
         }
     )
 );

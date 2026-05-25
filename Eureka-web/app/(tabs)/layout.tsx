@@ -6,7 +6,7 @@ import useAuthStore from "@/store/auth.store";
 import { ShoppingBag, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 function TopNav({ onCartOpen }: { onCartOpen: () => void }) {
   const totalItems = useCartStore((s) => s.getTotalItems());
@@ -65,7 +65,8 @@ function TopNav({ onCartOpen }: { onCartOpen: () => void }) {
 export default function TabLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user } = useAuthStore();
   const router = useRouter();
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  const isCartOpen = useCartStore((s) => s.isCartOpen);
+  const setCartOpen = useCartStore((s) => s.setCartOpen);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -81,11 +82,11 @@ export default function TabLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      <TopNav onCartOpen={() => setIsCartOpen(true)} />
+      <TopNav onCartOpen={() => setCartOpen(true)} />
       <main className="flex-1 pt-[84px]">
         {children}
       </main>
-      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+      <CartDrawer isOpen={isCartOpen} onClose={() => setCartOpen(false)} />
     </div>
   );
 }

@@ -136,12 +136,14 @@ export interface CartItemType {
 export interface CartStore {
     items: CartItemType[];
     appliedPromo: { promoId: string; codeUpper: string; discountCents: number } | null;
+    isCartOpen: boolean;
     addItem: (item: Omit<CartItemType, "quantity">) => void;
     removeItem: (id: string, specialRequest?: string) => void;
     increaseQty: (id: string, specialRequest?: string) => void;
     decreaseQty: (id: string, specialRequest?: string) => void;
     clearCart: () => void;
     setAppliedPromo: (promo: { promoId: string; codeUpper: string; discountCents: number } | null) => void;
+    setCartOpen: (open: boolean) => void;
     getTotalItems: () => number;
     getTotalPrice: () => number;
 }
