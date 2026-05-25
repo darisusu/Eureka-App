@@ -168,6 +168,18 @@ CREATE TRIGGER trg_orders_updated_at
   EXECUTE FUNCTION set_updated_at();
 
 -- Atomic ETA calculation — called from /api/create-checkout
+-- Returns the timestamp when this category's queue can next accept a new order.
+-- Logic:
+--   1. If has_queue = false: returns now + base_prep (fixed, no queueing).
+--   2. If has_queue = true: finds the latest dept_ready_at slot booked in the
+--      last 2 hours (by dept_ready_at, not created_at), then takes the later of:
+--        - now + base_prep  (floor: can't be faster than base cook time)
+--        - last_slot + gap  (queue position: politely after the previous order)
+--      The 2-hour window ignores ancient completed orders so the queue resets
+--      naturally when the kitchen is idle. If no slot exists in that window,
+--      last_slot is NULL and the result falls back to now + base_prep.
+--   3. If result > now + max_wait: returns NULL (kitchen overloaded; caller
+--      should surface "unavailable" rather than show a misleading ETA).
 CREATE OR REPLACE FUNCTION calculate_dept_ready_at(p_category_id UUID)
 RETURNS TIMESTAMPTZ AS $$
 DECLARE
