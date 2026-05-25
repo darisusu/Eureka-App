@@ -15,12 +15,23 @@ function StripeRedirectInner() {
   const { user } = useAuthStore();
   const { clearCart, items, setCartOpen } = useCartStore();
   const addRecentOrder = useOrdersStore((state) => state.addRecentOrder);
-  const [status, setStatus] = useState<"processing" | "success" | "failed">("processing");
+  const [status, setStatus] = useState<"processing" | "success" | "failed" | "popup">("processing");
   const ran = useRef(false);
 
   useEffect(() => {
     if (ran.current) return;
     ran.current = true;
+
+    // Stripe opens 3D Secure in a NEW TAB when the issuer's auth page can't be
+    // embedded in an iframe. That tab lands here, but the ORIGINAL tab is the
+    // one that resolves confirmPayment (redirect: "if_required") and records
+    // the order. This popup must not run a duplicate confirmation or show a
+    // failure screen — close it so focus returns to the original tab.
+    if (typeof window !== "undefined" && window.opener && window.opener !== window) {
+      setStatus("popup");
+      window.close();
+      return;
+    }
 
     const paymentIntent = searchParams.get("payment_intent");
     const orderId = searchParams.get("order_id");
@@ -108,6 +119,14 @@ function StripeRedirectInner() {
           <div className="text-5xl">❌</div>
           <p className="paragraph-semibold text-dark-100">Payment was not completed.</p>
           <p className="paragraph-regular text-gray-400">Returning you to your cart...</p>
+        </>
+      )}
+
+      {status === "popup" && (
+        <>
+          <div className="text-5xl">✅</div>
+          <p className="paragraph-semibold text-dark-100">Authentication complete.</p>
+          <p className="paragraph-regular text-gray-400">You can close this tab and return to Eureka.</p>
         </>
       )}
 
