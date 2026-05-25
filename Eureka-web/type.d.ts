@@ -203,6 +203,7 @@ export interface CartFooterProps {
     promoCode?: string | null;
     estimatedTime: EstimatedTime;
     isSubmitting: boolean;
+    isLocked: boolean;
     onApplyPromo: () => void;
     isApplyingPromo: boolean;
     setPromoCode: (value: string) => void;

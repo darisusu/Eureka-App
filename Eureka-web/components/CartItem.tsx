@@ -4,7 +4,7 @@ import { useCartStore } from "@/store/cart.store";
 import type { CartItemType } from "@/type";
 import { Minus, Plus, Trash2 } from "lucide-react";
 
-const CartItem = ({ item }: { item: CartItemType }) => {
+const CartItem = ({ item, isLocked }: { item: CartItemType; isLocked?: boolean }) => {
   const { increaseQty, decreaseQty, removeItem } = useCartStore();
 
   return (
@@ -27,7 +27,8 @@ const CartItem = ({ item }: { item: CartItemType }) => {
           <div className="flex flex-row items-center gap-x-4 mt-2">
             <button
               onClick={() => decreaseQty(item.id, item.specialRequest)}
-              className="cart-item__actions"
+              disabled={isLocked}
+              className="cart-item__actions disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Minus size={10} color="#FF9C01" />
             </button>
@@ -36,7 +37,8 @@ const CartItem = ({ item }: { item: CartItemType }) => {
 
             <button
               onClick={() => increaseQty(item.id, item.specialRequest)}
-              className="cart-item__actions"
+              disabled={isLocked}
+              className="cart-item__actions disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Plus size={10} color="#FF9C01" />
             </button>
@@ -50,7 +52,8 @@ const CartItem = ({ item }: { item: CartItemType }) => {
 
       <button
         onClick={() => removeItem(item.id, item.specialRequest)}
-        className="flex-center p-1"
+        disabled={isLocked}
+        className="flex-center p-1 disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <Trash2 size={20} className="text-gray-400 hover:text-red-500 transition-colors" />
       </button>

@@ -162,6 +162,7 @@ const CartFooter = ({
   promoCode,
   estimatedTime,
   isSubmitting,
+  isLocked,
   onApplyPromo,
   isApplyingPromo,
   setPromoCode,
@@ -180,18 +181,19 @@ const CartFooter = ({
         <h3 className="h3-bold text-dark-100 mb-4">Promo Code</h3>
         <div className="flex items-center gap-4">
           <input
-            className="flex-1 rounded-full bg-slate-50 px-5 py-2.5 text-base outline-none border border-transparent focus:border-primary"
+            className="flex-1 rounded-full bg-slate-50 px-5 py-2.5 text-base outline-none border border-transparent focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="Enter promo code here"
             value={promoCodeInput}
             onChange={(e) => setPromoCode(e.target.value)}
             autoComplete="off"
+            disabled={isLocked}
           />
           <button
             onClick={onApplyPromo}
-            disabled={!hasCode || isApplyingPromo}
+            disabled={!hasCode || isApplyingPromo || isLocked}
             className={cn(
-              "rounded-full px-6 py-3 text-white text-base font-semibold transition-opacity",
-              hasCode ? "bg-primary" : "bg-gray-300 cursor-not-allowed"
+              "rounded-full px-6 py-3 text-white text-base font-semibold transition-opacity disabled:cursor-not-allowed",
+              hasCode && !isLocked ? "bg-primary" : "bg-gray-300"
             )}
           >
             {isApplyingPromo ? "Checking..." : "Redeem"}
@@ -556,6 +558,7 @@ export default function CartDrawer({
                 <CartItem
                   key={`${item.id}:${item.specialRequest ?? ""}`}
                   item={item}
+                  isLocked={isLocked}
                 />
               ))}
               <CartFooter
@@ -565,6 +568,7 @@ export default function CartDrawer({
                 promoCode={promoCodeForUI}
                 estimatedTime={estimatedTime}
                 isSubmitting={isSubmitting}
+                isLocked={isLocked}
                 onApplyPromo={handleApplyPromo}
                 isApplyingPromo={isApplyingPromo}
                 setPromoCode={handlePromoCodeChange}
