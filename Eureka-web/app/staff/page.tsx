@@ -23,7 +23,7 @@ export default function StaffScreen() {
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const { user, logout, isAuthenticated } = useAuthStore();
-  const isUpdating = useRef(false);
+  const pollVersion = useRef(0);
 
   useEffect(() => {
     if (!isAuthenticated || user?.role !== "staff") {
@@ -32,9 +32,10 @@ export default function StaffScreen() {
   }, [isAuthenticated, user?.role]);
 
   const fetchActiveOrders = async (isMounted: { current: boolean }) => {
+    const myVersion = ++pollVersion.current;
     try {
       const data = await getActiveOrders();
-      if (isMounted.current && !isUpdating.current) {
+      if (isMounted.current && pollVersion.current === myVersion) {
         setOrders(data);
         setOrdersError(null);
       }
@@ -110,7 +111,7 @@ export default function StaffScreen() {
       updatedAt: new Date().toISOString(),
     };
 
-    isUpdating.current = true;
+    pollVersion.current += 1; // invalidate any in-flight polls
     setOrders((prev) => {
       const filtered = prev.filter((item) => item.orderId !== order.orderId);
       if (nextStatus === "collected") return filtered;
@@ -123,6 +124,8 @@ export default function StaffScreen() {
 
     try {
       await updateOrderStatus({ orderId: order.orderId, status: nextStatus });
+      const isMounted = { current: true };
+      void fetchActiveOrders(isMounted); // re-sync from DB after write
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update order status.");
       setOrders((prev) => {
@@ -133,8 +136,6 @@ export default function StaffScreen() {
       if (nextStatus === "collected") {
         setHistoryOrders((prev) => prev.filter((o) => o.orderId !== order.orderId));
       }
-    } finally {
-      isUpdating.current = false;
     }
   };
 
