@@ -284,8 +284,13 @@ export const getCollectedOrders = async (): Promise<StaffOrder[]> => {
 
 export const updateOrderStatus = async ({ orderId, status }: { orderId: string; status: OrderStatus }) => {
     if (!orderId) throw new Error("orderId is required.");
-    const { error } = await supabase.from("orders").update({ status }).eq("id", orderId);
-    if (error) throw new Error(error.message);
+    const res = await fetch("/api/update-order-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, status }),
+    });
+    const json = await res.json() as { ok: boolean; message?: string };
+    if (!json.ok) throw new Error(json.message ?? "Failed to update order status.");
 };
 
 const getPromoCodeByCodeUpper = async (codeUpper: string): Promise<PromoCode> => {

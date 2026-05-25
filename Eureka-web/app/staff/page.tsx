@@ -124,8 +124,6 @@ export default function StaffScreen() {
 
     try {
       await updateOrderStatus({ orderId: order.orderId, status: nextStatus });
-      const isMounted = { current: true };
-      void fetchActiveOrders(isMounted); // re-sync from DB after write
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update order status.");
       setOrders((prev) => {
