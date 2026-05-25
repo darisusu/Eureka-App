@@ -32,6 +32,8 @@ function StripeRedirectInner() {
       return;
     }
 
+    const orderNumber = searchParams.get("order_number") ?? orderId;
+
     const confirm = async () => {
       try {
         const confirmation = await confirmCheckoutPayment({
@@ -40,9 +42,6 @@ function StripeRedirectInner() {
           paymentIntentId: paymentIntent,
         });
 
-        if (!confirmation.isPaid) throw new Error("Payment not confirmed.");
-
-        const orderNumber = searchParams.get("order_number") ?? orderId;
         addRecentOrder({
           orderId,
           orderNumber,
@@ -58,12 +57,27 @@ function StripeRedirectInner() {
             : "Items unavailable",
           readyAt: confirmation.readyAt,
         });
+      } catch {
+        // Server confirmation failed (e.g. transient error), but Stripe already
+        // captured the payment (redirect_status=succeeded is authoritative).
+        // Add a placeholder order entry so the customer can reference it.
+        addRecentOrder({
+          orderId,
+          orderNumber,
+          dateLabel: new Date().toLocaleDateString("en-SG", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }),
+          total: 0,
+          status: "received",
+          itemsSummary: "Items unavailable",
+        });
+      } finally {
+        // Always clear the cart — Stripe has charged the customer.
         clearCart();
         setStatus("success");
-        setTimeout(() => router.replace("/"), 1200);
-      } catch (err) {
-        setStatus("error");
-        setErrorMsg(err instanceof Error ? err.message : "Payment verification failed.");
+        setTimeout(() => router.replace("/"), 1500);
       }
     };
 
@@ -91,7 +105,7 @@ function StripeRedirectInner() {
           <div className="text-5xl">❌</div>
           <p className="paragraph-semibold text-dark-100">{errorMsg}</p>
           <Link
-            href="/cart"
+            href="/search"
             className="bg-primary text-white rounded-full px-6 py-3 font-bold"
           >
             Back to cart

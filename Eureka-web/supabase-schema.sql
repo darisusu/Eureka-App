@@ -200,7 +200,9 @@ BEGIN
 
   SELECT MAX(ods.dept_ready_at) INTO v_last_ready
   FROM order_dept_slots ods
+  JOIN orders o ON o.id = ods.order_id
   WHERE ods.category_id = p_category_id
+    AND o.is_paid = true
     AND ods.dept_ready_at > NOW() - INTERVAL '2 hours';
 
   v_result := GREATEST(

@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
         }
 
         const maxReadyAt = validReadyAts.reduce((max, r) => (r > max ? r : max), validReadyAts[0]);
-        const minutesFromNow = Math.ceil((new Date(maxReadyAt).getTime() - Date.now()) / 60000);
+        const minutesFromNow = Math.round((new Date(maxReadyAt).getTime() - Date.now()) / 60000);
 
         return NextResponse.json({ ok: true, data: { minutesFromNow } });
     } catch (err) {

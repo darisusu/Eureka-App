@@ -18,7 +18,9 @@ import cn from "clsx";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { ArrowLeft, ShoppingCart } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import Image from "next/image";
+import fishSleep from "@/assets/mascots/Fish-Sleep.png";
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
@@ -225,18 +227,14 @@ export default function CartDrawer({
 }) {
   const router = useRouter();
   const items = useCartStore((state) => state.items);
-  const { clearCart } = useCartStore();
+  const appliedPromo = useCartStore((state) => state.appliedPromo);
+  const { clearCart, setAppliedPromo } = useCartStore();
   const { user } = useAuthStore();
   const addRecentOrder = useOrdersStore((state) => state.addRecentOrder);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [promoCodeInput, setPromoCodeInput] = useState("");
-  const [appliedPromo, setAppliedPromo] = useState<{
-    promoId: string;
-    codeUpper: string;
-    discountCents: number;
-  } | null>(null);
   const [pricing, setPricing] = useState({
     subtotalCents: 0,
     discountCents: 0,
@@ -254,6 +252,14 @@ export default function CartDrawer({
     orderNumber: string;
     totalCents: number;
   } | null>(null);
+
+  // Restore promo input from persisted store (e.g. after payment failure redirect)
+  useEffect(() => {
+    if (appliedPromo?.codeUpper) {
+      setPromoCodeInput(appliedPromo.codeUpper);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Lock body scroll when drawer is open
   useEffect(() => {
@@ -534,15 +540,15 @@ export default function CartDrawer({
           )}
 
           {items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-4">
-              <ShoppingCart size={64} className="text-gray-300" />
+            <div className="flex flex-col items-center justify-center pt-4 pb-0 gap-0">
+              <Image src={fishSleep} alt="Empty cart" width={300} height={300} className="h-auto" />
               <h2 className="h3-bold text-dark-100">Your cart is empty</h2>
-              <p className="paragraph-regular text-gray-200 text-center">
-                Looks like you haven&apos;t added any food to your cart yet.
+              <p className="paragraph-regular text-gray-200 whitespace-nowrap">
+                Looks like you haven&apos;t added any food to your cart yet!
               </p>
             </div>
           ) : (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
               {items.map((item) => (
                 <CartItem
                   key={`${item.id}:${item.specialRequest ?? ""}`}

@@ -46,7 +46,7 @@ const Filter = ({ categories }: { categories: Category[] }) => {
 
           <div
             ref={scrollRef}
-            className="flex overflow-x-auto scrollbar-hide flex-1"
+            className="flex overflow-x-auto overflow-y-hidden scrollbar-hide flex-1"
           >
             {filterData.map((item) => (
               <button

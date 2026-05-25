@@ -77,7 +77,10 @@ export async function POST(req: NextRequest) {
             }
 
             const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-            if (paymentIntent.status !== "succeeded") {
+            // Accept "succeeded" or "processing" — async payment methods (bank redirect, etc.)
+            // are still in "processing" when Stripe redirects with redirect_status=succeeded.
+            // The webhook will fire once fully settled; we mark received optimistically.
+            if (paymentIntent.status !== "succeeded" && paymentIntent.status !== "processing") {
                 return NextResponse.json({ ok: false, message: `Payment not completed. Status: ${paymentIntent.status}` }, { status: 400 });
             }
 
