@@ -86,8 +86,9 @@ Standard Appwrite Auth: `account.create()` registers an account, `account.create
 - Post-payment confirmation: `/api/create-checkout` with `action: "confirm"` verifies PaymentIntent, sets order to `"received"`, returns `readyAt` from `order_dept_slots`
 - Navigation: middleware redirects `/` → `/search`; fixed top nav bar with EurekaGO branding (fish logo), dynamic cart pill, and Profile link — no bottom tab bar, no desktop sidebar
 - Customer order tracking: **removed from the customer UI**; the home screen (`/`) is no longer customer-facing (redirects to `/search`)
-- Profile screen: displays name and phone, shows up to 3 recent orders fetched from Supabase on load
-- Staff dashboard: three-column kanban (Received / Preparing / Ready); role-gated (redirects non-staff); optimistic status updates with error rollback; polls every 10 s for active orders and every 15 s for history; "Cooking X min" timer uses `updated_at`; History tab; Settings tab with sign-out
+- Profile screen: displays name and phone; "Back to Menu" link to `/search`; shows up to 3 recent paid orders fetched from Supabase on load (stored in orders store, trimmed to `RECENT_ORDERS_LIMIT = 3`); each order is a clickable card linking to `/order/[id]`
+- Order detail page (`/order/[id]`): shows order number, colour-coded status badge, ready-by banner (visible when status is `received`, `preparing`, or `ready`), itemised line items with qty and special requests, price breakdown (subtotal + promo discount + total paid); accessible from the profile page
+- Staff dashboard: three-column kanban (Received / Preparing / Ready); role-gated (redirects non-staff); optimistic status updates with error rollback; polls every 10 s for active orders and every 15 s for history; "Cooking X min" timer uses `updated_at`; History tab (collected orders); Settings tab with sign-out
 
 ---
 
@@ -108,7 +109,7 @@ Schema source: `Eureka-web/supabase-schema.sql`
 | `promo_redemptions` | `id`, `promo_id` (fk), `user_id` (fk), `order_id` (fk), `redeemed_at`, `discount_cents` |
 | `daily_order_counter` | `business_date` (DATE pk), `last_number` (int) — tracks per-day order number; business day defined as SGT minus 4 h so 00:00–03:59 SGT rolls into the previous day |
 
-**Order status flow:** `pending_payment` → `received` → `preparing` → `ready` → `collected` (also `cancelled` — set manually via Supabase console only, no customer-facing cancel UI)
+**Order status flow:** `pending_payment` → `received` → `preparing` → `ready` → `collected` (also `cancelled` — set manually via Supabase console only, no customer-facing cancel UI). The `"paid"` value exists in the `OrderStatus` TypeScript type for UI rendering completeness but is not emitted by the current DB flow.
 
 **`orders.updated_at`** is present in the schema with an auto-update trigger (`trg_orders_updated_at`). If the column is missing from an existing DB, run: `ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();`
 
@@ -142,6 +143,10 @@ STRIPE_CURRENCY
 - Delivery, dine-in table management, in-store POS, inventory management (explicit non-goals for MVP)
 - `orders.ready_at` is populated from `order_dept_slots` but not surfaced separately to the customer beyond the ETA label
 
+## Vestigial / Unused Files (web)
+
+- `constants/index.ts` — carried over from the mobile port; exports hardcoded `CATEGORIES` (Burger, Pizza, Wrap, Burrito), `offers`, `sides`, `toppings`, and PNG asset references. None of these are imported anywhere in the web app. The web loads categories dynamically from Supabase via `getCategories()`.
+
 ---
 
 ## Key Decisions
@@ -162,6 +167,6 @@ STRIPE_CURRENCY
 
 **Cart is not persisted.** `cart.store.ts` is plain Zustand with no `persist` middleware — cart is lost on page refresh.
 
-**Orders store IS persisted.** `orders.store.ts` uses Zustand `persist` to localStorage to keep the last 3 orders across sessions.
+**Orders store IS persisted.** `orders.store.ts` uses Zustand `persist` to localStorage (`name: "recent-orders"`) to keep up to `RECENT_ORDERS_LIMIT = 3` orders across sessions.
 
-**Seeding scripts live in mobile only.** `lib/seed.ts` and `lib/data.ts` are in `Eureka-mobile/` only. Run with `npx tsx lib/seed.ts`. Never run against production.
+**Each app has its own seed script.** `Eureka-web/lib/seed.ts` targets Supabase (seeds Drinks / Porridge / Fish Soup categories with matching menu items); run with `npx tsx --env-file=.env.local lib/seed.ts`. `Eureka-mobile/lib/seed.ts` + `lib/data.ts` target Appwrite; run with `npx tsx lib/seed.ts`. Never run either against production.
