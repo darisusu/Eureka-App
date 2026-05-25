@@ -24,6 +24,7 @@ export default function StaffScreen() {
   const [historyError, setHistoryError] = useState<string | null>(null);
   const { user, logout, isAuthenticated } = useAuthStore();
   const pollVersion = useRef(0);
+  const isUpdating = useRef(false);
 
   useEffect(() => {
     if (!isAuthenticated || user?.role !== "staff") {
@@ -35,7 +36,7 @@ export default function StaffScreen() {
     const myVersion = ++pollVersion.current;
     try {
       const data = await getActiveOrders();
-      if (isMounted.current && pollVersion.current === myVersion) {
+      if (isMounted.current && pollVersion.current === myVersion && !isUpdating.current) {
         setOrders(data);
         setOrdersError(null);
       }
@@ -111,7 +112,8 @@ export default function StaffScreen() {
       updatedAt: new Date().toISOString(),
     };
 
-    pollVersion.current += 1; // invalidate any in-flight polls
+    pollVersion.current += 1; // invalidate polls that started before this click
+    isUpdating.current = true; // block polls that start after this click but resolve before API
     setOrders((prev) => {
       const filtered = prev.filter((item) => item.orderId !== order.orderId);
       if (nextStatus === "collected") return filtered;
@@ -134,6 +136,8 @@ export default function StaffScreen() {
       if (nextStatus === "collected") {
         setHistoryOrders((prev) => prev.filter((o) => o.orderId !== order.orderId));
       }
+    } finally {
+      isUpdating.current = false;
     }
   };
 
