@@ -103,6 +103,26 @@ export type OrderHistoryEntry = {
     readyAt?: string;
 };
 
+export type OrderDetailItem = {
+    name: string;
+    qty: number;
+    price: number;
+    specialRequest?: string;
+};
+
+export type OrderDetail = {
+    orderId: string;
+    orderNumber: string;
+    status: OrderStatus;
+    total: number;
+    discountCents: number;
+    promoCode?: string;
+    dateLabel: string;
+    timeLabel: string;
+    readyAt?: string;
+    items: OrderDetailItem[];
+};
+
 export interface CartItemType {
     id: string;
     name: string;

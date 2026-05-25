@@ -6,6 +6,7 @@ import type {
     CheckoutResponse,
     CreateUserParams,
     GetMenuParams,
+    OrderDetail,
     OrderHistoryEntry,
     PromoCode,
     StaffOrder,
@@ -173,7 +174,7 @@ export const getRecentOrders = async ({
         const orderItems = itemsByOrder.get(order.id) ?? [];
         return {
             orderId: order.id,
-            orderNumber: String(order.order_number),
+            orderNumber: String(order.order_number).padStart(5, "0"),
             dateLabel: formatDate(order.created_at),
             total: Number(order.total),
             status: order.status as OrderStatus,
@@ -194,6 +195,41 @@ export const getOrderStatus = async (orderId: string): Promise<OrderStatus | nul
     return data.status as OrderStatus;
 };
 
+export const getOrderDetail = async (orderId: string): Promise<OrderDetail | null> => {
+    const { data: order, error } = await supabase
+        .from("orders")
+        .select("id, status, total, order_number, created_at, ready_at, promo_code, discount_cents")
+        .eq("id", orderId)
+        .single();
+
+    if (error || !order) return null;
+
+    const { data: items } = await supabase
+        .from("order_items")
+        .select("name, qty, price, special_request")
+        .eq("order_id", orderId);
+
+    const date = new Date(order.created_at);
+
+    return {
+        orderId: order.id,
+        orderNumber: String(order.order_number).padStart(5, "0"),
+        status: order.status as OrderStatus,
+        total: Number(order.total),
+        discountCents: order.discount_cents ?? 0,
+        promoCode: order.promo_code ?? undefined,
+        dateLabel: date.toLocaleDateString("en-SG", { month: "short", day: "numeric", year: "numeric" }),
+        timeLabel: date.toLocaleTimeString("en-SG", { hour: "2-digit", minute: "2-digit" }),
+        readyAt: order.ready_at ?? undefined,
+        items: (items ?? []).map(i => ({
+            name: i.name,
+            qty: i.qty,
+            price: Number(i.price),
+            specialRequest: i.special_request ?? undefined,
+        })),
+    };
+};
+
 export const getActiveOrders = async (): Promise<StaffOrder[]> => {
     const { data: orders, error } = await supabase
         .from("orders")
@@ -207,7 +243,7 @@ export const getActiveOrders = async (): Promise<StaffOrder[]> => {
 
     return orders.map(order => ({
         orderId: order.id,
-        orderNumber: String(order.order_number),
+        orderNumber: String(order.order_number).padStart(5, "0"),
         status: order.status as OrderStatus,
         createdAt: order.created_at,
         updatedAt: (order as { updated_at?: string }).updated_at ?? order.created_at,
@@ -233,7 +269,7 @@ export const getCollectedOrders = async (): Promise<StaffOrder[]> => {
 
     return orders.map(order => ({
         orderId: order.id,
-        orderNumber: String(order.order_number),
+        orderNumber: String(order.order_number).padStart(5, "0"),
         status: order.status as OrderStatus,
         createdAt: order.created_at,
         updatedAt: (order as { updated_at?: string }).updated_at ?? order.created_at,
