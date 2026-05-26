@@ -86,17 +86,42 @@ export default function StaffScreen() {
     };
   }, []);
 
+  const getDayLabel = (dayKey: string) => {
+    const now = new Date();
+    const sgtOffset = 8 * 60 * 60 * 1000;
+    const todayKey = new Date(now.getTime() + sgtOffset).toISOString().slice(0, 10);
+    const yesterdayKey = new Date(now.getTime() + sgtOffset - 86400000).toISOString().slice(0, 10);
+    if (dayKey === todayKey) return "Today";
+    if (dayKey === yesterdayKey) return "Yesterday";
+    return new Date(`${dayKey}T12:00:00+08:00`).toLocaleDateString("en-SG", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+  };
+
+  const groupHistoryByDay = (orders: StaffOrder[]) => {
+    const sgtOffset = 8 * 60 * 60 * 1000;
+    const groups: Record<string, StaffOrder[]> = {};
+    for (const order of orders) {
+      const key = new Date(new Date(order.updatedAt).getTime() + sgtOffset)
+        .toISOString()
+        .slice(0, 10);
+      (groups[key] ??= []).push(order);
+    }
+    return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
+  };
+
   const getTimeLabel = (order: StaffOrder) => {
     const reference = order.status === "received" ? order.createdAt : order.updatedAt;
     const minutes = Math.max(0, Math.floor((Date.now() - new Date(reference).getTime()) / 60000));
     if (order.status === "received") return `Waiting ${minutes} min`;
-    if (order.status === "preparing") return `Cooking ${minutes} min`;
     return `Ready ${minutes} min ago`;
   };
 
   const handleOrderAction = async (order: StaffOrder) => {
     const nextStatusMap: Record<StaffOrder["status"], StaffOrder["status"]> = {
-      received: "preparing",
+      received: "ready",
       preparing: "ready",
       ready: "collected",
       pending_payment: "received",
@@ -170,10 +195,9 @@ export default function StaffScreen() {
       {/* Dashboard tab */}
       {activeTab === "dashboard" && (
         <div className="flex-1 px-6 py-4 overflow-hidden">
-          <div className="grid grid-cols-3 gap-4 h-full">
+          <div className="grid grid-cols-2 gap-4 h-full">
             {[
-              { key: "received", actionLabel: "Start Prep" },
-              { key: "preparing", actionLabel: "Mark Ready" },
+              { key: "received", actionLabel: "Mark Ready" },
               { key: "ready", actionLabel: "Mark Collected" },
             ].map((column) => (
               <div key={column.key} className="flex flex-col bg-gray-50 rounded-2xl p-4 overflow-hidden">
@@ -260,56 +284,60 @@ export default function StaffScreen() {
       {activeTab === "history" && (
         <div className="flex-1 px-6 py-4 overflow-y-auto">
           <h2 className="text-lg font-bold text-gray-900">History</h2>
-          <p className="text-xs text-gray-500 mt-1 mb-4">
-            Collected orders (latest first).
-          </p>
-          <div className="flex flex-col gap-3">
-            {isHistoryLoading ? (
-              <div className="border border-dashed border-gray-300 rounded-xl p-3">
-                <p className="text-sm text-gray-400">Loading history...</p>
-              </div>
-            ) : historyError ? (
-              <div className="border border-dashed border-gray-300 rounded-xl p-3">
-                <p className="text-sm text-gray-400">{historyError}</p>
-              </div>
-            ) : historyOrders.length === 0 ? (
-              <div className="border border-dashed border-gray-300 rounded-xl p-3">
-                <p className="text-sm text-gray-400">No collected orders yet.</p>
-              </div>
-            ) : (
-              historyOrders.map((order) => (
-                <div
-                  key={order.orderId}
-                  className="bg-white border border-gray-200 rounded-xl p-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-base font-bold text-gray-900">
-                      {order.orderNumber}
-                    </span>
-                    <span className="text-xs font-semibold text-gray-500">
-                      {getTimeLabel(order)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">{order.userName}</p>
-                  <div className="mt-3 flex flex-col gap-1">
-                    {order.items.length === 0 ? (
-                      <p className="text-xs text-gray-400">Items unavailable.</p>
-                    ) : (
-                      order.items.map((item, index) => (
-                        <p
-                          key={`${order.orderId}-history-${index}`}
-                          className="text-xs text-gray-700"
-                        >
-                          {item.qty}x {item.name}
-                          {item.specialRequest ? ` (${item.specialRequest})` : ""}
-                        </p>
-                      ))
-                    )}
-                  </div>
+          {isHistoryLoading ? (
+            <div className="mt-4 border border-dashed border-gray-300 rounded-xl p-3">
+              <p className="text-sm text-gray-400">Loading history...</p>
+            </div>
+          ) : historyError ? (
+            <div className="mt-4 border border-dashed border-gray-300 rounded-xl p-3">
+              <p className="text-sm text-gray-400">{historyError}</p>
+            </div>
+          ) : historyOrders.length === 0 ? (
+            <div className="mt-4 border border-dashed border-gray-300 rounded-xl p-3">
+              <p className="text-sm text-gray-400">No collected orders yet.</p>
+            </div>
+          ) : (
+            groupHistoryByDay(historyOrders).map(([dayKey, dayOrders]) => (
+              <div key={dayKey} className="mt-5">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">
+                  {getDayLabel(dayKey)}
+                </p>
+                <div className="flex flex-col gap-3">
+                  {dayOrders.map((order) => (
+                    <div
+                      key={order.orderId}
+                      className="bg-white border border-gray-200 rounded-xl p-4"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-base font-bold text-gray-900">
+                          {order.orderNumber}
+                        </span>
+                        <span className="text-xs font-semibold text-gray-500">
+                          {getTimeLabel(order)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">{order.userName}</p>
+                      <div className="mt-3 flex flex-col gap-1">
+                        {order.items.length === 0 ? (
+                          <p className="text-xs text-gray-400">Items unavailable.</p>
+                        ) : (
+                          order.items.map((item, index) => (
+                            <p
+                              key={`${order.orderId}-history-${index}`}
+                              className="text-xs text-gray-700"
+                            >
+                              {item.qty}x {item.name}
+                              {item.specialRequest ? ` (${item.specialRequest})` : ""}
+                            </p>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))
-            )}
-          </div>
+              </div>
+            ))
+          )}
         </div>
       )}
 
