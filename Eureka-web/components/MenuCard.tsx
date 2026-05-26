@@ -22,23 +22,31 @@ const MenuCard = ({
   const { addItem } = useCartStore();
   const restrictedQty = useCartStore((state) =>
     state.items
-      .filter((i) => i.categoryName && CATEGORY_ITEM_LIMIT_NAMES.includes(i.categoryName))
-      .reduce((sum, i) => sum + i.quantity, 0)
+      .filter(
+        (i) =>
+          i.categoryName && CATEGORY_ITEM_LIMIT_NAMES.includes(i.categoryName),
+      )
+      .reduce((sum, i) => sum + i.quantity, 0),
   );
-  const isRestricted = !!categoryName && CATEGORY_ITEM_LIMIT_NAMES.includes(categoryName);
+  const isRestricted =
+    !!categoryName && CATEGORY_ITEM_LIMIT_NAMES.includes(categoryName);
   const isAtLimit = isRestricted && restrictedQty >= CATEGORY_ITEM_LIMIT;
-  const showUpgrade = !!categoryName && !SET_MEAL_UPGRADE_EXCLUDED_CATEGORIES.includes(categoryName);
+  const showUpgrade =
+    !!categoryName &&
+    !SET_MEAL_UPGRADE_EXCLUDED_CATEGORIES.includes(categoryName);
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [specialRequest, setSpecialRequest] = useState("");
   const [drinkOptions, setDrinkOptions] = useState<MenuItem[]>([]);
   const [upgradeItemId, setUpgradeItemId] = useState<string | null>(null);
-  const [selectedDrinkId, setSelectedDrinkId] = useState<string | null>(null);
+  const [selectedDrinkId, setSelectedDrinkId] = useState<
+    string | null | undefined
+  >(undefined);
   const [loadingUpgrade, setLoadingUpgrade] = useState(false);
 
   const handleOpen = () => {
     setSpecialRequest("");
-    setSelectedDrinkId(null);
+    setSelectedDrinkId(undefined);
     setIsModalVisible(true);
     if (showUpgrade && drinkOptions.length === 0 && !loadingUpgrade) {
       setLoadingUpgrade(true);
@@ -54,6 +62,9 @@ const MenuCard = ({
 
   const handleAddToCart = () => {
     if (isAtLimit) return;
+    const selectedDrink = selectedDrinkId
+      ? drinkOptions.find((d) => d.id === selectedDrinkId)
+      : null;
     addItem({
       id,
       name,
@@ -62,29 +73,20 @@ const MenuCard = ({
       specialRequest: specialRequest.trim() || undefined,
       categoryId: category_id ?? undefined,
       categoryName: categoryName ?? undefined,
+      upgrade:
+        selectedDrink && upgradeItemId
+          ? { upgradeItemId, drinkName: selectedDrink.name }
+          : undefined,
     });
-
-    if (selectedDrinkId && upgradeItemId) {
-      const drink = drinkOptions.find((d) => d.id === selectedDrinkId);
-      if (drink) {
-        addItem({
-          id: upgradeItemId,
-          name: "Set Meal Upgrade",
-          price: SET_MEAL_UPGRADE_PRICE,
-          image_url: "",
-          specialRequest: drink.name,
-          categoryId: undefined,
-          categoryName: undefined,
-        });
-      }
-    }
-
     setIsModalVisible(false);
     setSpecialRequest("");
-    setSelectedDrinkId(null);
+    setSelectedDrinkId(undefined);
   };
 
-  const upgradeAvailable = !loadingUpgrade && !!upgradeItemId && drinkOptions.length > 0;
+  const upgradeAvailable =
+    !loadingUpgrade && !!upgradeItemId && drinkOptions.length > 0;
+  const effectivePrice =
+    price + (selectedDrinkId && upgradeAvailable ? SET_MEAL_UPGRADE_PRICE : 0);
 
   return (
     <>
@@ -124,8 +126,12 @@ const MenuCard = ({
                 />
               ) : null}
               <div className="flex items-baseline gap-x-2 flex-1 min-w-0">
-                <p className="base-bold text-dark-100 line-clamp-1 flex-1 min-w-0">{name}</p>
-                <p className="paragraph-bold text-primary whitespace-nowrap">${price}</p>
+                <p className="base-bold text-dark-100 line-clamp-1 flex-1 min-w-0">
+                  {name}
+                </p>
+                <p className="paragraph-bold text-primary whitespace-nowrap">
+                  ${price}
+                </p>
               </div>
               <button
                 onClick={() => setIsModalVisible(false)}
@@ -136,39 +142,42 @@ const MenuCard = ({
             </div>
 
             {!!description && (
-              <p className="paragraph-regular text-gray-200 mt-3">{description}</p>
+              <p className="paragraph-regular text-gray-200 mt-3">
+                {description}
+              </p>
             )}
 
             {isRestricted && (
-              <div className={`mt-3 rounded-lg px-3 py-2 text-sm ${isAtLimit ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-700"}`}>
+              <div
+                className={`mt-3 rounded-lg px-3 py-2 text-sm ${isAtLimit ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-700"}`}
+              >
                 {isAtLimit
                   ? `You've reached the ${CATEGORY_ITEM_LIMIT}-item limit for Fish Soup & Zichar orders.`
-                  : `Fish Soup & Zichar: max ${CATEGORY_ITEM_LIMIT} items per order (${restrictedQty}/${CATEGORY_ITEM_LIMIT} used).`}
+                  : `Fish Soup & Zichar: max ${CATEGORY_ITEM_LIMIT} items per order (${restrictedQty}/${CATEGORY_ITEM_LIMIT}).`}
               </div>
             )}
 
             {showUpgrade && (loadingUpgrade || upgradeAvailable) && (
               <div className="mt-4 border-t border-gray-100 pt-4">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="paragraph-bold text-dark-100">Set Meal Upgrade</p>
-                  <span className="text-sm font-semibold text-primary">+${SET_MEAL_UPGRADE_PRICE.toFixed(2)}</span>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="paragraph-bold text-dark-100">
+                    Make it a set (+${SET_MEAL_UPGRADE_PRICE.toFixed(2)})
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    Choose max 1 (optional)
+                  </p>
                 </div>
                 {loadingUpgrade ? (
-                  <p className="text-sm text-gray-400">Loading drinks...</p>
+                  <p className="text-sm text-gray-400 mt-2">
+                    Loading drinks...
+                  </p>
                 ) : (
-                  <div className="flex flex-col gap-2.5">
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="radio"
-                        name={`upgrade-${id}`}
-                        checked={selectedDrinkId === null}
-                        onChange={() => setSelectedDrinkId(null)}
-                        className="accent-primary w-4 h-4 flex-shrink-0"
-                      />
-                      <span className="body-regular text-gray-400">Skip</span>
-                    </label>
+                  <div className="flex flex-col mt-2">
                     {drinkOptions.map((drink) => (
-                      <label key={drink.id} className="flex items-center gap-3 cursor-pointer">
+                      <label
+                        key={drink.id}
+                        className="flex items-center gap-3 py-2.5 cursor-pointer border-b border-gray-100"
+                      >
                         <input
                           type="radio"
                           name={`upgrade-${id}`}
@@ -176,20 +185,32 @@ const MenuCard = ({
                           onChange={() => setSelectedDrinkId(drink.id)}
                           className="accent-primary w-4 h-4 flex-shrink-0"
                         />
-                        <span className="body-regular text-dark-100">{drink.name}</span>
+                        <span className="body-regular text-dark-100 flex-1">
+                          {drink.name}
+                        </span>
                       </label>
                     ))}
+                    <label className="flex items-center gap-3 py-2.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        name={`upgrade-${id}`}
+                        checked={selectedDrinkId === null}
+                        onChange={() => setSelectedDrinkId(null)}
+                        className="accent-primary w-4 h-4 flex-shrink-0"
+                      />
+                      <span className="body-regular text-gray-400">
+                        No thanks
+                      </span>
+                    </label>
                   </div>
                 )}
               </div>
             )}
 
-            <p className="body-regular text-gray-200 mt-4">
-              Note to restaurant / Special Request (optional)
-            </p>
+            <p className="body-regular text-gray-200 mt-4">Special request</p>
             <textarea
               className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm leading-5 resize-none outline-none focus:border-primary"
-              placeholder="Add your request (subject to restaurant discretion)"
+              placeholder="(Subject to availability)"
               maxLength={200}
               rows={3}
               value={specialRequest}
@@ -208,7 +229,9 @@ const MenuCard = ({
                 disabled={isAtLimit}
                 className="bg-primary px-4 py-2 rounded-full hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <span className="paragraph-bold text-white">Add to Cart</span>
+                <span className="paragraph-bold text-white">
+                  Add to Cart — ${effectivePrice.toFixed(2)}
+                </span>
               </button>
             </div>
           </div>

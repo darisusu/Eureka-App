@@ -91,6 +91,8 @@ export type StaffOrder = {
     createdAt: string;
     updatedAt: string;
     userName: string;
+    userPhone?: string;
+    readyAt?: string | null;
     items: StaffOrderItem[];
 };
 
@@ -155,6 +157,12 @@ export interface CartStore {
     getTotalItems: () => number;
     getTotalPrice: () => number;
     purgeCategoryItems: (categoryIds: string[]) => void;
+    updateItem: (
+        id: string,
+        oldSpecialRequest: string | undefined,
+        oldUpgradeDrinkName: string | undefined,
+        updates: { specialRequest?: string; upgrade?: CartItemUpgrade; quantity: number }
+    ) => void;
 }
 
 export type PromoType = "PERCENT" | "FIXED";

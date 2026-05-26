@@ -95,13 +95,20 @@ export const calculateCartTotals = async ({
     items: CartItemType[];
     promoCode?: string | null;
 }): Promise<CartTotalsResponse> => {
+    const expandedItems = items.flatMap(i => {
+        const base = { menuId: i.id, quantity: i.quantity };
+        if (i.upgrade) {
+            return [base, { menuId: i.upgrade.upgradeItemId, quantity: i.quantity }];
+        }
+        return [base];
+    });
     const res = await fetch("/api/calculate-cart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             userId,
             promoCode,
-            items: items.map(i => ({ menuId: i.id, quantity: i.quantity })),
+            items: expandedItems,
         }),
     });
     const result = await res.json();
@@ -118,6 +125,13 @@ export const createCheckout = async ({
     items: CartItemType[];
     promoCode?: string | null;
 }): Promise<CheckoutResponse> => {
+    const checkoutItems = items.flatMap(i => {
+        const base = { menuId: i.id, quantity: i.quantity, specialRequest: i.specialRequest };
+        if (i.upgrade) {
+            return [base, { menuId: i.upgrade.upgradeItemId, quantity: i.quantity, specialRequest: i.upgrade.drinkName }];
+        }
+        return [base];
+    });
     const res = await fetch("/api/create-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -125,11 +139,7 @@ export const createCheckout = async ({
             action: "create",
             userId,
             promoCode,
-            items: items.map(i => ({
-                menuId: i.id,
-                quantity: i.quantity,
-                specialRequest: i.specialRequest,
-            })),
+            items: checkoutItems,
         }),
     });
     const result = await res.json();
@@ -254,7 +264,7 @@ export const getOrderDetail = async (orderId: string): Promise<OrderDetail | nul
 export const getActiveOrders = async (): Promise<StaffOrder[]> => {
     const { data: orders, error } = await supabase
         .from(TABLE_ORDERS)
-        .select("id, status, order_number, created_at, updated_at, users(name), order_items(id, name, qty, special_request)")
+        .select("id, status, order_number, created_at, updated_at, ready_at, users(name, phone), order_items(id, name, qty, special_request)")
         .eq("is_paid", true)
         .in("status", ["received", "preparing", "ready"])
         .order("created_at", { ascending: false })
@@ -268,7 +278,9 @@ export const getActiveOrders = async (): Promise<StaffOrder[]> => {
         status: order.status as OrderStatus,
         createdAt: order.created_at,
         updatedAt: (order as { updated_at?: string }).updated_at ?? order.created_at,
-        userName: (order.users as { name?: string } | null)?.name ?? "—",
+        userName: (order.users as { name?: string; phone?: string } | null)?.name ?? "—",
+        userPhone: (order.users as { name?: string; phone?: string } | null)?.phone,
+        readyAt: (order as { ready_at?: string | null }).ready_at,
         items: ((order.order_items as { name: string; qty: number; special_request?: string }[]) ?? []).map(i => ({
             name: i.name,
             qty: i.qty,
@@ -280,7 +292,7 @@ export const getActiveOrders = async (): Promise<StaffOrder[]> => {
 export const getCollectedOrders = async (): Promise<StaffOrder[]> => {
     const { data: orders, error } = await supabase
         .from(TABLE_ORDERS)
-        .select("id, status, order_number, created_at, updated_at, users(name), order_items(id, name, qty, special_request)")
+        .select("id, status, order_number, created_at, updated_at, ready_at, users(name, phone), order_items(id, name, qty, special_request)")
         .eq("is_paid", true)
         .eq("status", "collected")
         .order("created_at", { ascending: false })
@@ -294,7 +306,9 @@ export const getCollectedOrders = async (): Promise<StaffOrder[]> => {
         status: order.status as OrderStatus,
         createdAt: order.created_at,
         updatedAt: (order as { updated_at?: string }).updated_at ?? order.created_at,
-        userName: (order.users as { name?: string } | null)?.name ?? "—",
+        userName: (order.users as { name?: string; phone?: string } | null)?.name ?? "—",
+        userPhone: (order.users as { name?: string; phone?: string } | null)?.phone,
+        readyAt: (order as { ready_at?: string | null }).ready_at,
         items: ((order.order_items as { name: string; qty: number; special_request?: string }[]) ?? []).map(i => ({
             name: i.name,
             qty: i.qty,

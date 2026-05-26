@@ -2,7 +2,7 @@
 
 import CartItem from "@/components/CartItem";
 import CustomButton from "@/components/CustomButton";
-import { CATEGORY_ITEM_LIMIT, CATEGORY_ITEM_LIMIT_NAMES } from "@/lib/config";
+import { CATEGORY_ITEM_LIMIT, CATEGORY_ITEM_LIMIT_NAMES, SET_MEAL_UPGRADE_PRICE } from "@/lib/config";
 import { calculateCartTotals, confirmCheckoutPayment, createCheckout, getCategories } from "@/lib/supabase";
 import { isCategoryAvailable } from "@/lib/time";
 import useAuthStore from "@/store/auth.store";
@@ -364,7 +364,10 @@ export default function CartDrawer({
   };
 
   const localSubtotalCents = items.reduce(
-    (sum, item) => sum + Math.round(item.price * 100) * item.quantity,
+    (sum, item) =>
+      sum +
+      Math.round((item.price + (item.upgrade ? SET_MEAL_UPGRADE_PRICE : 0)) * 100) *
+        item.quantity,
     0
   );
   const subtotalCents = hasServerTotals ? pricing.subtotalCents : localSubtotalCents;
@@ -614,12 +617,12 @@ export default function CartDrawer({
             <div className="flex flex-col gap-1">
               {hasRestrictedItems && (
                 <div className={`rounded-xl px-4 py-3 mb-2 text-sm ${restrictedQty >= CATEGORY_ITEM_LIMIT ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-700"}`}>
-                  <span className="font-semibold">Fish Soup & Zichar:</span> limited to {CATEGORY_ITEM_LIMIT} items per order ({restrictedQty}/{CATEGORY_ITEM_LIMIT} used)
+                  <span className="font-semibold">Fish Soup & Zichar:</span> limited to {CATEGORY_ITEM_LIMIT} items per order ({restrictedQty}/{CATEGORY_ITEM_LIMIT})
                 </div>
               )}
               {items.map((item) => (
                 <CartItem
-                  key={`${item.id}:${item.specialRequest ?? ""}`}
+                  key={`${item.id}:${item.specialRequest ?? ""}:${item.upgrade?.drinkName ?? ""}`}
                   item={item}
                   isLocked={isLocked}
                 />
