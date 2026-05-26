@@ -119,6 +119,19 @@ export default function StaffScreen() {
     return `Ready ${minutes} min ago`;
   };
 
+  const getReadyAtLabel = (order: StaffOrder) => {
+    if (!order.readyAt) return null;
+    const readyDate = new Date(order.readyAt);
+    const estMins = Math.round((readyDate.getTime() - new Date(order.createdAt).getTime()) / 60000);
+    const timeStr = readyDate.toLocaleTimeString("en-SG", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Singapore",
+    });
+    return { timeStr, estMins };
+  };
+
   const handleOrderAction = async (order: StaffOrder) => {
     const nextStatusMap: Record<StaffOrder["status"], StaffOrder["status"]> = {
       received: "ready",
@@ -182,7 +195,7 @@ export default function StaffScreen() {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-3 py-1.5 rounded-full text-xs font-bold ${
-                activeTab === tab ? "bg-black text-white" : "bg-gray-100 text-gray-500"
+                activeTab === tab ? "bg-black text-white" : "bg-gray-200 text-gray-600"
               }`}
             >
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -200,11 +213,11 @@ export default function StaffScreen() {
               { key: "ready", actionLabel: "Mark Collected" },
             ].map((column) => (
               <div key={column.key} className="flex flex-col bg-gray-50 rounded-2xl p-4 overflow-hidden">
-                <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                <div className="flex items-center gap-2 mb-4 flex-shrink-0">
                   <span className="text-base font-bold text-gray-900">
                     {column.key.toUpperCase()}
                   </span>
-                  <span className="px-2 py-0.5 rounded-full bg-white border border-gray-200 text-xs font-bold text-gray-600">
+                  <span className="px-2 py-0.5 rounded-full bg-black text-xs font-bold text-white">
                     {orders.filter((o) => o.status === column.key).length}
                   </span>
                 </div>
@@ -237,35 +250,54 @@ export default function StaffScreen() {
                       .map((order) => (
                         <div
                           key={order.orderId}
-                          className="bg-white border border-gray-200 rounded-xl p-4"
+                          className="bg-white border border-gray-200 rounded-xl overflow-hidden flex min-h-[100px]"
                         >
-                          <div className="flex items-center justify-between">
-                            <span className="text-base font-bold text-gray-900">
-                              {order.orderNumber}
-                            </span>
-                            <span className="text-xs font-semibold text-gray-500">
-                              {getTimeLabel(order)}
-                            </span>
+                          {/* Left: order info */}
+                          <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
+                            <div>
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-4xl font-black tracking-tight text-gray-900 leading-none">
+                                  {order.orderNumber}
+                                </span>
+                                <span className="text-xs font-semibold text-gray-400 whitespace-nowrap">
+                                  {getTimeLabel(order)}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {order.userName}{order.userPhone ? ` (${order.userPhone})` : ""}
+                              </p>
+                              {(() => {
+                                const eta = getReadyAtLabel(order);
+                                return eta ? (
+                                  <p className="text-xs text-gray-400">
+                                    Ready {eta.timeStr} · {eta.estMins} min
+                                  </p>
+                                ) : null;
+                              })()}
+                            </div>
+                            <div className="flex flex-col gap-0.5 mt-2">
+                              {order.items.length === 0 ? (
+                                <p className="text-xs text-gray-400">Items unavailable.</p>
+                              ) : (
+                                order.items.map((item, index) => (
+                                  <div key={`${order.orderId}-${index}`}>
+                                    <p className="text-xs text-gray-700">
+                                      {item.qty}x {item.name}
+                                    </p>
+                                    {item.specialRequest && (
+                                      <p className="text-xs text-gray-400 pl-3">↳ {item.specialRequest}</p>
+                                    )}
+                                  </div>
+                                ))
+                              )}
+                            </div>
                           </div>
-                          <p className="text-xs text-gray-500 mt-1">{order.userName}</p>
-                          <div className="mt-3 flex flex-col gap-1">
-                            {order.items.length === 0 ? (
-                              <p className="text-xs text-gray-400">Items unavailable.</p>
-                            ) : (
-                              order.items.map((item, index) => (
-                                <p
-                                  key={`${order.orderId}-${index}`}
-                                  className="text-xs text-gray-700"
-                                >
-                                  {item.qty}x {item.name}
-                                  {item.specialRequest ? ` (${item.specialRequest}*)` : ""}
-                                </p>
-                              ))
-                            )}
-                          </div>
+                          {/* Right: full-height action button */}
                           <button
                             onClick={() => handleOrderAction(order)}
-                            className="mt-4 bg-black rounded-full px-4 py-2 text-xs font-bold text-white hover:opacity-80 transition-opacity"
+                            className={`w-[44%] flex-shrink-0 flex items-center justify-center text-sm font-bold text-white transition-opacity hover:opacity-80 ${
+                              column.key === "ready" ? "bg-green-800" : "bg-black"
+                            }`}
                           >
                             {column.actionLabel}
                           </button>
@@ -315,19 +347,30 @@ export default function StaffScreen() {
                           {getTimeLabel(order)}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">{order.userName}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {order.userName}{order.userPhone ? ` (${order.userPhone})` : ""}
+                      </p>
+                      {(() => {
+                        const eta = getReadyAtLabel(order);
+                        return eta ? (
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            Est. ready by {eta.timeStr} · {eta.estMins} min
+                          </p>
+                        ) : null;
+                      })()}
                       <div className="mt-3 flex flex-col gap-1">
                         {order.items.length === 0 ? (
                           <p className="text-xs text-gray-400">Items unavailable.</p>
                         ) : (
                           order.items.map((item, index) => (
-                            <p
-                              key={`${order.orderId}-history-${index}`}
-                              className="text-xs text-gray-700"
-                            >
-                              {item.qty}x {item.name}
-                              {item.specialRequest ? ` (${item.specialRequest})` : ""}
-                            </p>
+                            <div key={`${order.orderId}-history-${index}`}>
+                              <p className="text-xs text-gray-700">
+                                {item.qty}x {item.name}
+                              </p>
+                              {item.specialRequest && (
+                                <p className="text-xs text-gray-400 pl-3">↳ {item.specialRequest}</p>
+                              )}
+                            </div>
                           ))
                         )}
                       </div>
