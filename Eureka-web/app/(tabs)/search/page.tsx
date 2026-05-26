@@ -63,7 +63,7 @@ function SearchInner() {
                   group.category.available_until
                 );
                 return (
-                <div key={group.category.id} className={`mb-10${!available ? " opacity-50 pointer-events-none" : ""}`}>
+                <div key={group.category.id} className={!available ? "mb-10 opacity-50 pointer-events-none" : "mb-10"}>
                   <div className="flex items-baseline gap-2 mb-4">
                     <h2 className="h2-bold text-dark-100">
                       {group.category.name}
