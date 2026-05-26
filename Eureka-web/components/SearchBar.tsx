@@ -9,8 +9,7 @@ const SearchBar = () => {
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("query") ?? "");
 
-  const handleChange = (text: string) => {
-    setQuery(text);
+  const commit = (text: string) => {
     const params = new URLSearchParams(searchParams.toString());
     if (!text) {
       params.delete("query");
@@ -29,7 +28,7 @@ const SearchBar = () => {
 
   return (
     <div className="flex flex-row items-center rounded-full border border-gray-200 bg-slate-50 px-4 gap-2">
-      <button onClick={() => handleChange(query)} className="flex-shrink-0">
+      <button onClick={() => commit(query)} className="flex-shrink-0">
         <Search size={22} color="#5D5F6D" />
       </button>
 
@@ -38,7 +37,8 @@ const SearchBar = () => {
         className="flex-1 py-2 px-2 bg-transparent outline-none text-dark-100 paragraph-medium placeholder:text-gray-400"
         placeholder="Search for food you want..."
         value={query}
-        onChange={(e) => handleChange(e.target.value)}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && commit(query)}
       />
 
       {query.length > 0 && (
