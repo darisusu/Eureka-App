@@ -5,17 +5,25 @@ import { useCartStore } from "@/store/cart.store";
 import useAuthStore from "@/store/auth.store";
 import { ShoppingBag, User } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 function TopNav({ onCartOpen }: { onCartOpen: () => void }) {
   const totalItems = useCartStore((s) => s.getTotalItems());
   const totalPrice = useCartStore((s) => s.getTotalPrice());
+  const pathname = usePathname();
+
+  function handleLogoClick(e: React.MouseEvent<HTMLAnchorElement>) {
+    if (pathname === "/search") {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 bg-white">
       <div className="flex items-center justify-between px-5 py-3 max-w-5xl mx-auto">
-        <Link href="/search" className="flex items-center gap-0">
+        <Link href="/search" className="flex items-center gap-0" onClick={handleLogoClick}>
           <span className="text-primary font-quicksand-bold text-3xl tracking-tight">EurekaGO</span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/fish.png" alt="Eureka fish" className="h-[60px] w-auto object-contain -ml-4 mt-2" />
