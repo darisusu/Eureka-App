@@ -1,7 +1,10 @@
 "use client";
 
 import CustomButton from "@/components/CustomButton";
-import { STAFF_ACTIVE_ORDERS_POLL_MS, STAFF_HISTORY_POLL_MS } from "@/lib/config";
+import {
+  STAFF_ACTIVE_ORDERS_POLL_MS,
+  STAFF_HISTORY_POLL_MS,
+} from "@/lib/config";
 import {
   getActiveOrders,
   getCollectedOrders,
@@ -15,7 +18,9 @@ import toast from "react-hot-toast";
 
 export default function StaffScreen() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"dashboard" | "history" | "settings">("dashboard");
+  const [activeTab, setActiveTab] = useState<
+    "dashboard" | "history" | "settings"
+  >("dashboard");
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [orders, setOrders] = useState<StaffOrder[]>([]);
   const [isOrdersLoading, setIsOrdersLoading] = useState(true);
@@ -23,6 +28,7 @@ export default function StaffScreen() {
   const [historyOrders, setHistoryOrders] = useState<StaffOrder[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [expandedHistoryOrders, setExpandedHistoryOrders] = useState<Set<string>>(new Set());
   const { user, logout, isAuthenticated } = useAuthStore();
   const pollVersion = useRef(0);
   const isUpdating = useRef(false);
@@ -37,13 +43,19 @@ export default function StaffScreen() {
     const myVersion = ++pollVersion.current;
     try {
       const data = await getActiveOrders();
-      if (isMounted.current && pollVersion.current === myVersion && !isUpdating.current) {
+      if (
+        isMounted.current &&
+        pollVersion.current === myVersion &&
+        !isUpdating.current
+      ) {
         setOrders(data);
         setOrdersError(null);
       }
     } catch (error) {
       if (isMounted.current) {
-        setOrdersError(error instanceof Error ? error.message : "Failed to load orders.");
+        setOrdersError(
+          error instanceof Error ? error.message : "Failed to load orders.",
+        );
       }
     } finally {
       if (isMounted.current) setIsOrdersLoading(false);
@@ -59,7 +71,11 @@ export default function StaffScreen() {
       }
     } catch (error) {
       if (isMounted.current) {
-        setHistoryError(error instanceof Error ? error.message : "Failed to load order history.");
+        setHistoryError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load order history.",
+        );
       }
     } finally {
       if (isMounted.current) setIsHistoryLoading(false);
@@ -69,7 +85,10 @@ export default function StaffScreen() {
   useEffect(() => {
     const isMounted = { current: true };
     void fetchActiveOrders(isMounted);
-    const interval = setInterval(() => fetchActiveOrders(isMounted), STAFF_ACTIVE_ORDERS_POLL_MS);
+    const interval = setInterval(
+      () => fetchActiveOrders(isMounted),
+      STAFF_ACTIVE_ORDERS_POLL_MS,
+    );
     return () => {
       isMounted.current = false;
       clearInterval(interval);
@@ -79,7 +98,10 @@ export default function StaffScreen() {
   useEffect(() => {
     const isMounted = { current: true };
     void fetchHistoryOrders(isMounted);
-    const interval = setInterval(() => fetchHistoryOrders(isMounted), STAFF_HISTORY_POLL_MS);
+    const interval = setInterval(
+      () => fetchHistoryOrders(isMounted),
+      STAFF_HISTORY_POLL_MS,
+    );
     return () => {
       isMounted.current = false;
       clearInterval(interval);
@@ -89,8 +111,12 @@ export default function StaffScreen() {
   const getDayLabel = (dayKey: string) => {
     const now = new Date();
     const sgtOffset = 8 * 60 * 60 * 1000;
-    const todayKey = new Date(now.getTime() + sgtOffset).toISOString().slice(0, 10);
-    const yesterdayKey = new Date(now.getTime() + sgtOffset - 86400000).toISOString().slice(0, 10);
+    const todayKey = new Date(now.getTime() + sgtOffset)
+      .toISOString()
+      .slice(0, 10);
+    const yesterdayKey = new Date(now.getTime() + sgtOffset - 86400000)
+      .toISOString()
+      .slice(0, 10);
     if (dayKey === todayKey) return "Today";
     if (dayKey === yesterdayKey) return "Yesterday";
     return new Date(`${dayKey}T12:00:00+08:00`).toLocaleDateString("en-SG", {
@@ -113,16 +139,43 @@ export default function StaffScreen() {
   };
 
   const getTimeLabel = (order: StaffOrder) => {
-    const reference = order.status === "received" ? order.createdAt : order.updatedAt;
-    const minutes = Math.max(0, Math.floor((Date.now() - new Date(reference).getTime()) / 60000));
+    const reference =
+      order.status === "received" ? order.createdAt : order.updatedAt;
+    const minutes = Math.max(
+      0,
+      Math.floor((Date.now() - new Date(reference).getTime()) / 60000),
+    );
     if (order.status === "received") return `Waiting ${minutes} min`;
     return `Ready ${minutes} min ago`;
   };
 
+  const getCollectedTimeStr = (order: StaffOrder) =>
+    new Date(order.updatedAt).toLocaleTimeString("en-SG", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Singapore",
+    });
+
+  const toggleHistoryExpand = (orderId: string) => {
+    setExpandedHistoryOrders((prev) => {
+      const next = new Set(prev);
+      if (next.has(orderId)) next.delete(orderId);
+      else next.add(orderId);
+      return next;
+    });
+  };
+
+  const isOverdue = (order: StaffOrder) =>
+    order.status === "ready" &&
+    Date.now() - new Date(order.updatedAt).getTime() > 15 * 60 * 1000;
+
   const getReadyAtLabel = (order: StaffOrder) => {
     if (!order.readyAt) return null;
     const readyDate = new Date(order.readyAt);
-    const estMins = Math.round((readyDate.getTime() - new Date(order.createdAt).getTime()) / 60000);
+    const estMins = Math.round(
+      (readyDate.getTime() - new Date(order.createdAt).getTime()) / 60000,
+    );
     const timeStr = readyDate.toLocaleTimeString("en-SG", {
       hour: "numeric",
       minute: "2-digit",
@@ -165,15 +218,46 @@ export default function StaffScreen() {
     try {
       await updateOrderStatus({ orderId: order.orderId, status: nextStatus });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update order status.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update order status.",
+      );
       setOrders((prev) => {
         const filtered = prev.filter((item) => item.orderId !== order.orderId);
         if (nextStatus === "collected") return filtered;
         return [order, ...filtered];
       });
       if (nextStatus === "collected") {
-        setHistoryOrders((prev) => prev.filter((o) => o.orderId !== order.orderId));
+        setHistoryOrders((prev) =>
+          prev.filter((o) => o.orderId !== order.orderId),
+        );
       }
+    } finally {
+      isUpdating.current = false;
+    }
+  };
+
+  const handleRestoreToReady = async (order: StaffOrder) => {
+    const restoredOrder: StaffOrder = {
+      ...order,
+      status: "ready",
+      updatedAt: new Date().toISOString(),
+    };
+
+    pollVersion.current += 1;
+    isUpdating.current = true;
+    setHistoryOrders((prev) => prev.filter((o) => o.orderId !== order.orderId));
+    setOrders((prev) => [restoredOrder, ...prev]);
+
+    try {
+      await updateOrderStatus({ orderId: order.orderId, status: "ready" });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to restore order.",
+      );
+      setOrders((prev) => prev.filter((o) => o.orderId !== order.orderId));
+      setHistoryOrders((prev) => [order, ...prev]);
     } finally {
       isUpdating.current = false;
     }
@@ -195,7 +279,9 @@ export default function StaffScreen() {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-3 py-1.5 rounded-full text-xs font-bold ${
-                activeTab === tab ? "bg-black text-white" : "bg-gray-200 text-gray-600"
+                activeTab === tab
+                  ? "bg-black text-white"
+                  : "bg-gray-200 text-gray-600"
               }`}
             >
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -212,7 +298,10 @@ export default function StaffScreen() {
               { key: "received", actionLabel: "Mark Ready" },
               { key: "ready", actionLabel: "Mark Collected" },
             ].map((column) => (
-              <div key={column.key} className="flex flex-col bg-gray-50 rounded-2xl p-4 overflow-hidden">
+              <div
+                key={column.key}
+                className="flex flex-col bg-gray-50 rounded-2xl p-4 overflow-hidden"
+              >
                 <div className="flex items-center gap-2 mb-4 flex-shrink-0">
                   <span className="text-base font-bold text-gray-900">
                     {column.key.toUpperCase()}
@@ -231,7 +320,8 @@ export default function StaffScreen() {
                     <div className="border border-dashed border-gray-300 rounded-xl p-3">
                       <p className="text-sm text-gray-400">{ordersError}</p>
                     </div>
-                  ) : orders.filter((o) => o.status === column.key).length === 0 ? (
+                  ) : orders.filter((o) => o.status === column.key).length ===
+                    0 ? (
                     <div className="border border-dashed border-gray-300 rounded-xl p-3">
                       <p className="text-sm text-gray-400">No orders yet.</p>
                     </div>
@@ -240,17 +330,17 @@ export default function StaffScreen() {
                       .filter((o) => o.status === column.key)
                       .sort((a, b) => {
                         const aTime = new Date(
-                          a.status === "received" ? a.createdAt : a.updatedAt
+                          a.status === "received" ? a.createdAt : a.updatedAt,
                         ).getTime();
                         const bTime = new Date(
-                          b.status === "received" ? b.createdAt : b.updatedAt
+                          b.status === "received" ? b.createdAt : b.updatedAt,
                         ).getTime();
                         return bTime - aTime;
                       })
                       .map((order) => (
                         <div
                           key={order.orderId}
-                          className="bg-white border border-gray-200 rounded-xl overflow-hidden flex min-h-[100px]"
+                          className={`border rounded-xl overflow-hidden flex min-h-[100px] ${isOverdue(order) ? "bg-orange-50 border-orange-300" : "bg-white border-gray-200"}`}
                         >
                           {/* Left: order info */}
                           <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
@@ -264,20 +354,24 @@ export default function StaffScreen() {
                                 </span>
                               </div>
                               <p className="text-xs text-gray-500 mt-1">
-                                {order.userName}{order.userPhone ? ` (${order.userPhone})` : ""}
+                                {order.userName}
+                                {order.userPhone ? ` (${order.userPhone})` : ""}
                               </p>
                               {(() => {
                                 const eta = getReadyAtLabel(order);
                                 return eta ? (
                                   <p className="text-xs text-gray-400">
-                                    Ready {eta.timeStr} · {eta.estMins} min
+                                    Est. ready by {eta.timeStr} · {eta.estMins}{" "}
+                                    min
                                   </p>
                                 ) : null;
                               })()}
                             </div>
                             <div className="flex flex-col gap-0.5 mt-2">
                               {order.items.length === 0 ? (
-                                <p className="text-xs text-gray-400">Items unavailable.</p>
+                                <p className="text-xs text-gray-400">
+                                  Items unavailable.
+                                </p>
                               ) : (
                                 order.items.map((item, index) => (
                                   <div key={`${order.orderId}-${index}`}>
@@ -285,7 +379,9 @@ export default function StaffScreen() {
                                       {item.qty}x {item.name}
                                     </p>
                                     {item.specialRequest && (
-                                      <p className="text-xs text-gray-400 pl-3">↳ {item.specialRequest}</p>
+                                      <p className="text-xs text-gray-400 pl-3">
+                                        ↳ {item.specialRequest}
+                                      </p>
                                     )}
                                   </div>
                                 ))
@@ -296,7 +392,9 @@ export default function StaffScreen() {
                           <button
                             onClick={() => handleOrderAction(order)}
                             className={`w-[44%] flex-shrink-0 flex items-center justify-center text-sm font-bold text-white transition-opacity hover:opacity-80 ${
-                              column.key === "ready" ? "bg-green-800" : "bg-black"
+                              column.key === "ready"
+                                ? "bg-green-800"
+                                : "bg-black"
                             }`}
                           >
                             {column.actionLabel}
@@ -330,48 +428,65 @@ export default function StaffScreen() {
           ) : (
             groupHistoryByDay(historyOrders).map(([dayKey, dayOrders]) => (
               <div key={dayKey} className="mt-5">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">
+                <p className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">
                   {getDayLabel(dayKey)}
                 </p>
                 <div className="flex flex-col gap-3">
                   {dayOrders.map((order) => (
                     <div
                       key={order.orderId}
-                      className="bg-white border border-gray-200 rounded-xl p-4"
+                      className="bg-white border border-gray-200 rounded-xl overflow-hidden"
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="text-base font-bold text-gray-900">
-                          {order.orderNumber}
-                        </span>
-                        <span className="text-xs font-semibold text-gray-500">
-                          {getTimeLabel(order)}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {order.userName}{order.userPhone ? ` (${order.userPhone})` : ""}
-                      </p>
-                      {(() => {
-                        const eta = getReadyAtLabel(order);
-                        return eta ? (
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            Est. ready by {eta.timeStr} · {eta.estMins} min
-                          </p>
-                        ) : null;
-                      })()}
-                      <div className="mt-3 flex flex-col gap-1">
-                        {order.items.length === 0 ? (
-                          <p className="text-xs text-gray-400">Items unavailable.</p>
-                        ) : (
-                          order.items.map((item, index) => (
-                            <div key={`${order.orderId}-history-${index}`}>
-                              <p className="text-xs text-gray-700">
-                                {item.qty}x {item.name}
-                              </p>
-                              {item.specialRequest && (
-                                <p className="text-xs text-gray-400 pl-3">↳ {item.specialRequest}</p>
-                              )}
-                            </div>
-                          ))
+                      <div className="flex-1 p-4 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className="text-base font-bold text-gray-900">
+                            {order.orderNumber}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-gray-500">
+                              Collected {getCollectedTimeStr(order)}
+                            </span>
+                            <button
+                              onClick={() => handleRestoreToReady(order)}
+                              className="px-2 py-0.5 rounded border border-gray-300 text-xs font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
+                            >
+                              Undo
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {order.userName}
+                          {order.userPhone ? ` (${order.userPhone})` : ""}
+                        </p>
+                        <div
+                          className={`mt-3 flex flex-col gap-1 overflow-hidden transition-all duration-200 ${expandedHistoryOrders.has(order.orderId) ? "" : "max-h-14"}`}
+                        >
+                          {order.items.length === 0 ? (
+                            <p className="text-xs text-gray-400">
+                              Items unavailable.
+                            </p>
+                          ) : (
+                            order.items.map((item, index) => (
+                              <div key={`${order.orderId}-history-${index}`}>
+                                <p className="text-xs text-gray-700">
+                                  {item.qty}x {item.name}
+                                </p>
+                                {item.specialRequest && (
+                                  <p className="text-xs text-gray-400 pl-3">
+                                    ↳ {item.specialRequest}
+                                  </p>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                        {order.items.length > 2 && (
+                          <button
+                            onClick={() => toggleHistoryExpand(order.orderId)}
+                            className="mt-1 text-xs text-gray-400 hover:text-gray-600"
+                          >
+                            {expandedHistoryOrders.has(order.orderId) ? "Show less" : "Show more"}
+                          </button>
                         )}
                       </div>
                     </div>
