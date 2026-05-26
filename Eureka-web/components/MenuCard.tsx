@@ -90,7 +90,7 @@ const MenuCard = ({
 
   return (
     <>
-      <div className="menu-card h-[260px]">
+      <div className="menu-card flex flex-col">
         <div className="relative">
           {image_url ? (
             <img
