@@ -247,7 +247,7 @@ export async function POST(req: NextRequest) {
                 ok: true,
                 data: {
                     orderId: orderDoc.id,
-                    orderNumber: String(orderDoc.order_number).padStart(ORDER_NUMBER_PAD_LENGTH, "0"),
+                    orderNumber: "G" + String(orderDoc.order_number).padStart(ORDER_NUMBER_PAD_LENGTH, "0"),
                     paymentRequired: false,
                     paymentIntentId: null,
                     clientSecret: null,
@@ -297,7 +297,7 @@ export async function POST(req: NextRequest) {
             ok: true,
             data: {
                 orderId: orderDoc.id,
-                orderNumber: String(orderDoc.order_number).padStart(ORDER_NUMBER_PAD_LENGTH, "0"),
+                orderNumber: "G" + String(orderDoc.order_number).padStart(ORDER_NUMBER_PAD_LENGTH, "0"),
                 paymentRequired: true,
                 paymentIntentId: paymentIntent.id,
                 clientSecret: paymentIntent.client_secret,

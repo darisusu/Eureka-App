@@ -90,7 +90,7 @@ export default function Profile() {
                   >
                     <div className="flex justify-between items-center gap-2">
                       <span className="paragraph-bold text-dark-100">
-                        #{order.orderNumber}
+                        {order.orderNumber}
                       </span>
                       <div className="flex items-center gap-1.5">
                         <span className="body-regular text-gray-100">

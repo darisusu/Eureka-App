@@ -81,7 +81,7 @@ export default function OrderDetailPage() {
         {/* Header: order number + status badge */}
         <div className="flex items-start justify-between gap-4 mb-1">
           <h1 className="h1-bold text-dark-100 leading-tight">
-            Order #{order.orderNumber}
+            Order {order.orderNumber}
           </h1>
           <span
             className={`mt-1.5 flex-shrink-0 px-3 py-1 rounded-full body-medium font-semibold ${statusCfg.bgColor} ${statusCfg.textColor}`}

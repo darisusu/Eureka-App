@@ -14,10 +14,10 @@ export const POST_PAYMENT_REDIRECT_DELAY_MS = 1_500;
 // ── Order Number Formatting ───────────────────────────────────────────────────
 
 /**
- * Display width of order numbers, zero-padded (e.g. "00042").
+ * Display width of the numeric part of order numbers, zero-padded (e.g. "G042").
  * Must match the sequence tracked by the daily_order_counter table in Supabase.
  */
-export const ORDER_NUMBER_PAD_LENGTH = 5;
+export const ORDER_NUMBER_PAD_LENGTH = 3;
 
 // ── Staff Dashboard Polling ───────────────────────────────────────────────────
 

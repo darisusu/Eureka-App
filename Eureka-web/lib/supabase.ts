@@ -191,7 +191,7 @@ export const getRecentOrders = async ({
         const orderItems = itemsByOrder.get(order.id) ?? [];
         return {
             orderId: order.id,
-            orderNumber: String(order.order_number).padStart(ORDER_NUMBER_PAD_LENGTH, "0"),
+            orderNumber: "G" + String(order.order_number).padStart(ORDER_NUMBER_PAD_LENGTH, "0"),
             dateLabel: formatDate(order.created_at),
             total: Number(order.total),
             status: order.status as OrderStatus,
@@ -230,7 +230,7 @@ export const getOrderDetail = async (orderId: string): Promise<OrderDetail | nul
 
     return {
         orderId: order.id,
-        orderNumber: String(order.order_number).padStart(ORDER_NUMBER_PAD_LENGTH, "0"),
+        orderNumber: "G" + String(order.order_number).padStart(ORDER_NUMBER_PAD_LENGTH, "0"),
         status: order.status as OrderStatus,
         total: Number(order.total),
         discountCents: order.discount_cents ?? 0,
@@ -260,7 +260,7 @@ export const getActiveOrders = async (): Promise<StaffOrder[]> => {
 
     return orders.map(order => ({
         orderId: order.id,
-        orderNumber: String(order.order_number).padStart(ORDER_NUMBER_PAD_LENGTH, "0"),
+        orderNumber: "G" + String(order.order_number).padStart(ORDER_NUMBER_PAD_LENGTH, "0"),
         status: order.status as OrderStatus,
         createdAt: order.created_at,
         updatedAt: (order as { updated_at?: string }).updated_at ?? order.created_at,
@@ -286,7 +286,7 @@ export const getCollectedOrders = async (): Promise<StaffOrder[]> => {
 
     return orders.map(order => ({
         orderId: order.id,
-        orderNumber: String(order.order_number).padStart(ORDER_NUMBER_PAD_LENGTH, "0"),
+        orderNumber: "G" + String(order.order_number).padStart(ORDER_NUMBER_PAD_LENGTH, "0"),
         status: order.status as OrderStatus,
         createdAt: order.created_at,
         updatedAt: (order as { updated_at?: string }).updated_at ?? order.created_at,
