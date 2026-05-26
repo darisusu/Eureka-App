@@ -2,7 +2,9 @@
 
 import CartItem from "@/components/CartItem";
 import CustomButton from "@/components/CustomButton";
-import { calculateCartTotals, confirmCheckoutPayment, createCheckout } from "@/lib/supabase";
+import { CATEGORY_ITEM_LIMIT, CATEGORY_ITEM_LIMIT_NAMES } from "@/lib/config";
+import { calculateCartTotals, confirmCheckoutPayment, createCheckout, getCategories } from "@/lib/supabase";
+import { isCategoryAvailable } from "@/lib/time";
 import useAuthStore from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
 import useOrdersStore from "@/store/orders.store";
@@ -235,7 +237,7 @@ export default function CartDrawer({
   const router = useRouter();
   const items = useCartStore((state) => state.items);
   const appliedPromo = useCartStore((state) => state.appliedPromo);
-  const { clearCart, setAppliedPromo } = useCartStore();
+  const { clearCart, setAppliedPromo, purgeCategoryItems } = useCartStore();
   const { user } = useAuthStore();
   const addRecentOrder = useOrdersStore((state) => state.addRecentOrder);
 
@@ -252,6 +254,11 @@ export default function CartDrawer({
     range: "20-30 min",
     note: "Based on current kitchen load",
   });
+
+  const restrictedQty = items
+    .filter((i) => i.categoryName && CATEGORY_ITEM_LIMIT_NAMES.includes(i.categoryName))
+    .reduce((sum, i) => sum + i.quantity, 0);
+  const hasRestrictedItems = restrictedQty > 0;
 
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [pendingCheckout, setPendingCheckout] = useState<{
@@ -278,6 +285,31 @@ export default function CartDrawer({
     return () => {
       document.body.style.overflow = "";
     };
+  }, [isOpen]);
+
+  // On open, purge any cart items whose category is currently outside its time window
+  useEffect(() => {
+    if (!isOpen || items.length === 0) return;
+    getCategories()
+      .then((cats) => {
+        const unavailableCats = cats.filter(
+          (c) => !isCategoryAvailable(c.available_from, c.available_until)
+        );
+        if (!unavailableCats.length) return;
+        const unavailableIds = unavailableCats.map((c) => c.id);
+        const affected = items.filter(
+          (i) => i.categoryId && unavailableIds.includes(i.categoryId)
+        );
+        if (!affected.length) return;
+        purgeCategoryItems(unavailableIds);
+        const names = unavailableCats
+          .filter((c) => affected.some((i) => i.categoryId === c.id))
+          .map((c) => c.name)
+          .join(", ");
+        toast(`Some items removed — ${names} is not available right now.`);
+      })
+      .catch(() => null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   const refreshTotals = async (options?: {
@@ -580,6 +612,11 @@ export default function CartDrawer({
             </div>
           ) : (
             <div className="flex flex-col gap-1">
+              {hasRestrictedItems && (
+                <div className={`rounded-xl px-4 py-3 mb-2 text-sm ${restrictedQty >= CATEGORY_ITEM_LIMIT ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-700"}`}>
+                  <span className="font-semibold">Fish Soup & Zichar:</span> limited to {CATEGORY_ITEM_LIMIT} items per order ({restrictedQty}/{CATEGORY_ITEM_LIMIT} used)
+                </div>
+              )}
               {items.map((item) => (
                 <CartItem
                   key={`${item.id}:${item.specialRequest ?? ""}`}

@@ -5,6 +5,35 @@ import type { OrderStatus } from "@/type";
 /** Maximum number of past orders stored in localStorage and shown on the profile page. */
 export const RECENT_ORDERS_LIMIT = 5;
 
+/** Price added (in dollars) when a customer selects the set meal drink upgrade. */
+export const SET_MEAL_UPGRADE_PRICE = 1.50;
+
+/**
+ * Name of the hidden menu item used to bill the set meal upgrade.
+ * Must exist in the Supabase menu table with is_available = false:
+ *   INSERT INTO menu (name, description, price, is_available)
+ *   VALUES ('Set Meal Upgrade', 'Includes a drink of your choice', 1.50, false);
+ */
+export const SET_MEAL_UPGRADE_ITEM_NAME = "Set Meal Upgrade";
+
+/** Supabase category name to query for available drink options in the upgrade picker. */
+export const SET_MEAL_UPGRADE_DRINKS_CATEGORY_NAME = "Drinks";
+
+/**
+ * Category names that do NOT show the set meal upgrade prompt.
+ * Must match the `name` column in the Supabase `categories` table exactly.
+ */
+export const SET_MEAL_UPGRADE_EXCLUDED_CATEGORIES: string[] = ["Drinks"];
+
+/** Maximum total quantity of items from restricted categories (Fish Soup, Zichar) per cart order. */
+export const CATEGORY_ITEM_LIMIT = 4;
+
+/**
+ * Category names subject to the per-order item quantity limit.
+ * Must match the `name` column in the Supabase `categories` table exactly.
+ */
+export const CATEGORY_ITEM_LIMIT_NAMES: string[] = ["Fish Soup", "Zichar"];
+
 /**
  * Milliseconds to wait on /stripe-redirect before navigating to the order detail page.
  * Gives the user time to read the "Payment confirmed!" message.
@@ -21,7 +50,7 @@ export const ORDER_NUMBER_PAD_LENGTH = 3;
 
 // ── Staff Dashboard Polling ───────────────────────────────────────────────────
 
-/** How often (ms) the staff dashboard re-fetches active orders (Received / Preparing / Ready). */
+/** How often (ms) the staff dashboard re-fetches active orders (Received / Ready). */
 export const STAFF_ACTIVE_ORDERS_POLL_MS = 10_000;
 
 /** How often (ms) the staff dashboard re-fetches collected order history. */
@@ -51,7 +80,6 @@ export const VALID_ORDER_STATUSES = [
     "pending_payment",
     "paid",
     "received",
-    "preparing",
     "ready",
     "collected",
     "cancelled",
@@ -61,7 +89,7 @@ export const VALID_ORDER_STATUSES = [
  * Statuses for which the "Ready by HH:MM" banner is shown on the order detail page.
  * Update here if the order status flow changes.
  */
-export const ACTIVE_ORDER_STATUSES: OrderStatus[] = ["received", "preparing", "ready"];
+export const ACTIVE_ORDER_STATUSES: OrderStatus[] = ["received", "ready"];
 
 /**
  * Central display config for each order status — label, text colour, background colour.
@@ -70,7 +98,6 @@ export const ACTIVE_ORDER_STATUSES: OrderStatus[] = ["received", "preparing", "r
  */
 export const STATUS_CONFIG: Record<OrderStatus, { label: string; textColor: string; bgColor: string }> = {
     received:        { label: "Confirmed",        textColor: "text-primary",  bgColor: "bg-primary/10"  },
-    preparing:       { label: "Preparing",        textColor: "text-primary",  bgColor: "bg-primary/20"  },
     ready:           { label: "Ready to Collect", textColor: "text-success",  bgColor: "bg-success/10"  },
     collected:       { label: "Collected",        textColor: "text-gray-100", bgColor: "bg-dark-100/5"  },
     cancelled:       { label: "Cancelled",        textColor: "text-error",    bgColor: "bg-error/10"    },

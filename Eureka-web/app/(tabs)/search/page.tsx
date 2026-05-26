@@ -3,6 +3,7 @@
 import Filter from "@/components/Filter";
 import MenuCard from "@/components/MenuCard";
 import SearchBar from "@/components/SearchBar";
+import { formatWindow, isCategoryAvailable } from "@/lib/time";
 import { getCategories, getMenu } from "@/lib/supabase";
 import type { Category, MenuItem } from "@/type";
 import { useSearchParams } from "next/navigation";
@@ -56,11 +57,23 @@ function SearchInner() {
                 category: cat,
                 items: menu.filter((item) => item.category_id === cat.id),
               }))
-              .map((group) => (
-                <div key={group.category.id} className="mb-10">
-                  <h2 className="h2-bold text-dark-100 mb-4">
-                    {group.category.name}
-                  </h2>
+              .map((group) => {
+                const available = isCategoryAvailable(
+                  group.category.available_from,
+                  group.category.available_until
+                );
+                return (
+                <div key={group.category.id} className={`mb-10${!available ? " opacity-50 pointer-events-none" : ""}`}>
+                  <div className="flex items-baseline gap-2 mb-4">
+                    <h2 className="h2-bold text-dark-100">
+                      {group.category.name}
+                    </h2>
+                    {(group.category.available_from && group.category.available_until) && (
+                      <span className="text-sm text-gray-400">
+                        Available {formatWindow(group.category.available_from, group.category.available_until)}
+                      </span>
+                    )}
+                  </div>
                   {group.items.length === 0 ? (
                     <p className="paragraph-medium text-gray-400">
                       No menu items at the moment.
@@ -68,12 +81,13 @@ function SearchInner() {
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       {group.items.map((item) => (
-                        <MenuCard key={item.id} item={item} />
+                        <MenuCard key={item.id} item={item} categoryName={group.category.name} />
                       ))}
                     </div>
                   )}
                 </div>
-              ))
+              );
+              })
           )}
         </div>
       </div>

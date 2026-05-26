@@ -1,11 +1,19 @@
 "use client";
 
+import { CATEGORY_ITEM_LIMIT, CATEGORY_ITEM_LIMIT_NAMES } from "@/lib/config";
 import { useCartStore } from "@/store/cart.store";
 import type { CartItemType } from "@/type";
 import { Minus, Plus, Trash2 } from "lucide-react";
 
 const CartItem = ({ item, isLocked }: { item: CartItemType; isLocked?: boolean }) => {
   const { increaseQty, decreaseQty, removeItem } = useCartStore();
+  const restrictedQty = useCartStore((state) =>
+    state.items
+      .filter((i) => i.categoryName && CATEGORY_ITEM_LIMIT_NAMES.includes(i.categoryName))
+      .reduce((sum, i) => sum + i.quantity, 0)
+  );
+  const isRestricted = !!item.categoryName && CATEGORY_ITEM_LIMIT_NAMES.includes(item.categoryName);
+  const isIncreaseDisabled = isLocked || (isRestricted && restrictedQty >= CATEGORY_ITEM_LIMIT);
 
   return (
     <div className="cart-item">
@@ -37,7 +45,7 @@ const CartItem = ({ item, isLocked }: { item: CartItemType; isLocked?: boolean }
 
             <button
               onClick={() => increaseQty(item.id, item.specialRequest)}
-              disabled={isLocked}
+              disabled={isIncreaseDisabled}
               className="cart-item__actions disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Plus size={10} color="#FF9C01" />

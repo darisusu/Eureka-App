@@ -15,6 +15,9 @@ CREATE TABLE categories (
   name TEXT NOT NULL,
   description TEXT,
   has_queue BOOLEAN DEFAULT TRUE,
+  available_from TIME,
+  available_until TIME,
+  sort_order INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -54,7 +57,7 @@ CREATE TABLE orders (
   order_number INTEGER NOT NULL,
   is_paid BOOLEAN DEFAULT FALSE,
   status TEXT DEFAULT 'pending_payment' CHECK (status IN (
-    'pending_payment', 'paid', 'received', 'preparing', 'ready', 'collected', 'cancelled'
+    'pending_payment', 'paid', 'received', 'ready', 'collected', 'cancelled'
   )),
   ready_at TIMESTAMPTZ,
   promo_id UUID,
@@ -219,7 +222,7 @@ BEGIN
   JOIN orders o ON o.id = ods.order_id
   WHERE ods.category_id = p_category_id
     AND o.is_paid = true
-    AND o.status IN ('received', 'preparing');
+    AND o.status = 'received';
 
   IF v_active_count > 0 THEN
     -- Position the last active order at NOW + base_prep + (count-1)*gap,

@@ -122,7 +122,6 @@ export default function StaffScreen() {
   const handleOrderAction = async (order: StaffOrder) => {
     const nextStatusMap: Record<StaffOrder["status"], StaffOrder["status"]> = {
       received: "ready",
-      preparing: "ready",
       ready: "collected",
       pending_payment: "received",
       paid: "received",

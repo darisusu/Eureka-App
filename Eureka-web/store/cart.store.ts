@@ -1,3 +1,4 @@
+import { CATEGORY_ITEM_LIMIT, CATEGORY_ITEM_LIMIT_NAMES } from "@/lib/config";
 import { CartStore } from "@/type";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
@@ -19,6 +20,14 @@ export const useCartStore = create<CartStore>()(
 
             addItem: (item) => {
                 const normalizedRequest = normalizeRequest(item.specialRequest);
+
+                if (item.categoryName && CATEGORY_ITEM_LIMIT_NAMES.includes(item.categoryName)) {
+                    const restrictedQty = get().items
+                        .filter((i) => i.categoryName && CATEGORY_ITEM_LIMIT_NAMES.includes(i.categoryName))
+                        .reduce((sum, i) => sum + i.quantity, 0);
+                    if (restrictedQty >= CATEGORY_ITEM_LIMIT) return;
+                }
+
                 const existing = get().items.find(
                     (i) =>
                         i.id === item.id &&
@@ -59,6 +68,15 @@ export const useCartStore = create<CartStore>()(
 
             increaseQty: (id, specialRequest) => {
                 const normalizedRequest = normalizeRequest(specialRequest);
+                const target = get().items.find(
+                    (i) => i.id === id && normalizeRequest(i.specialRequest) === normalizedRequest
+                );
+                if (target?.categoryName && CATEGORY_ITEM_LIMIT_NAMES.includes(target.categoryName)) {
+                    const restrictedQty = get().items
+                        .filter((i) => i.categoryName && CATEGORY_ITEM_LIMIT_NAMES.includes(i.categoryName))
+                        .reduce((sum, i) => sum + i.quantity, 0);
+                    if (restrictedQty >= CATEGORY_ITEM_LIMIT) return;
+                }
                 set({
                     items: get().items.map((i) =>
                         i.id === id &&
@@ -84,6 +102,14 @@ export const useCartStore = create<CartStore>()(
             },
 
             clearCart: () => set({ items: [], appliedPromo: null }),
+
+            purgeCategoryItems: (categoryIds) => {
+                set({
+                    items: get().items.filter(
+                        (i) => !i.categoryId || !categoryIds.includes(i.categoryId)
+                    ),
+                });
+            },
 
             getTotalItems: () =>
                 get().items.reduce((total, item) => total + item.quantity, 0),

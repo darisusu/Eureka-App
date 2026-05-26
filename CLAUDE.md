@@ -1,6 +1,6 @@
 # Eureka — Claude Code Context
 
-Eureka is a grab-and-go pre-order and prepay platform for high-volume food stalls. Customers browse a menu, add items to a cart, and pay via Stripe before their order enters the kitchen queue. After payment, customers see an estimated wait time; recent orders are accessible from the profile page. Staff use a role-gated dashboard to move orders through a kanban board (Received → Preparing → Ready → Collected). The MVP explicitly excludes delivery, dine-in table management, in-store POS, and inventory management.
+Eureka is a grab-and-go pre-order and prepay platform for high-volume food stalls. Customers browse a menu, add items to a cart, and pay via Stripe before their order enters the kitchen queue. After payment, customers see an estimated wait time; recent orders are accessible from the profile page. Staff use a role-gated dashboard to move orders through a kanban board (Received → Ready → Collected). The MVP explicitly excludes delivery, dine-in table management, in-store POS, and inventory management.
 
 ---
 
@@ -87,8 +87,8 @@ Standard Appwrite Auth: `account.create()` registers an account, `account.create
 - Navigation: middleware redirects `/` → `/search`; fixed top nav bar with EurekaGO branding (fish logo), dynamic cart pill, and Profile link — no bottom tab bar, no desktop sidebar
 - Customer order tracking: **removed from the customer UI**; the home screen (`/`) is no longer customer-facing (redirects to `/search`)
 - Profile screen: displays name and phone; "Back to Menu" link to `/search`; shows up to `RECENT_ORDERS_LIMIT` recent paid orders fetched from Supabase on load (stored in orders store, trimmed to that limit); each order is a clickable card linking to `/order/[id]`
-- Order detail page (`/order/[id]`): shows order number, colour-coded status badge, ready-by banner (visible when status is `received`, `preparing`, or `ready`), itemised line items with qty and special requests, price breakdown (subtotal + promo discount + total paid); accessible from the profile page
-- Staff dashboard: three-column kanban (Received / Preparing / Ready); role-gated (redirects non-staff); optimistic status updates with error rollback; polls every 10 s for active orders and every 15 s for history; "Cooking X min" timer uses `updated_at`; History tab (collected orders); Settings tab with sign-out
+- Order detail page (`/order/[id]`): shows order number, colour-coded status badge, ready-by banner (visible when status is `received` or `ready`), itemised line items with qty and special requests, price breakdown (subtotal + promo discount + total paid); accessible from the profile page
+- Staff dashboard: two-column kanban (Received / Ready); role-gated (redirects non-staff); optimistic status updates with error rollback; polls every 10 s for active orders and every 15 s for history; "Waiting X min" timer in Received column uses `created_at`; History tab (collected orders); Settings tab with sign-out
 
 ---
 
@@ -109,7 +109,7 @@ Schema source: `Eureka-web/supabase-schema.sql`
 | `promo_redemptions` | `id`, `promo_id` (fk), `user_id` (fk), `order_id` (fk), `redeemed_at`, `discount_cents` |
 | `daily_order_counter` | `business_date` (DATE pk), `last_number` (int) — tracks per-day order number; business day defined as SGT minus 4 h so 00:00–03:59 SGT rolls into the previous day |
 
-**Order status flow:** `pending_payment` → `received` → `preparing` → `ready` → `collected` (also `cancelled` — set manually via Supabase console only, no customer-facing cancel UI). The `"paid"` value exists in the `OrderStatus` TypeScript type for UI rendering completeness but is not emitted by the current DB flow.
+**Order status flow:** `pending_payment` → `received` → `ready` → `collected` (also `cancelled` — set manually via Supabase console only, no customer-facing cancel UI). The `"paid"` and `"preparing"` values still exist in the `OrderStatus` TypeScript type and DB schema for backward compatibility but are not emitted by the current flow.
 
 **`orders.updated_at`** is present in the schema with an auto-update trigger (`trg_orders_updated_at`). If the column is missing from an existing DB, run: `ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();`
 

@@ -1,4 +1,5 @@
-import { TABLE_MENU, TABLE_PROMO_CODES, TABLE_PROMO_REDEMPTIONS } from "@/lib/config";
+import { TABLE_CATEGORIES, TABLE_MENU, TABLE_PROMO_CODES, TABLE_PROMO_REDEMPTIONS } from "@/lib/config";
+import { formatWindow, nowSGT } from "@/lib/time";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -25,11 +26,35 @@ export async function POST(req: NextRequest) {
 
         const { data: menuRows, error: menuError } = await supabase
             .from(TABLE_MENU)
-            .select("id, price")
+            .select("id, price, category_id")
             .in("id", menuIds);
 
         if (menuError) {
             return NextResponse.json({ ok: false, message: "Failed to fetch menu." }, { status: 500 });
+        }
+
+        // Category availability check
+        const cartCategoryIds = [...new Set(
+            (menuRows ?? []).map(m => m.category_id).filter(Boolean)
+        )] as string[];
+
+        if (cartCategoryIds.length > 0) {
+            const { data: catRows } = await supabase
+                .from(TABLE_CATEGORIES)
+                .select("id, name, available_from, available_until")
+                .in("id", cartCategoryIds);
+
+            const now = nowSGT();
+            for (const cat of catRows ?? []) {
+                if (cat.available_from && cat.available_until) {
+                    if (now < cat.available_from.slice(0, 5) || now > cat.available_until.slice(0, 5)) {
+                        return NextResponse.json(
+                            { ok: false, message: `${cat.name} is not available right now (available ${formatWindow(cat.available_from, cat.available_until)}).` },
+                            { status: 400 }
+                        );
+                    }
+                }
+            }
         }
 
         const priceById = new Map((menuRows ?? []).map(m => [m.id, Number(m.price)]));

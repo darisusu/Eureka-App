@@ -13,6 +13,8 @@ export interface Category {
     name: string;
     description: string | null;
     has_queue: boolean;
+    available_from: string | null;
+    available_until: string | null;
 }
 
 export type User = {
@@ -26,7 +28,6 @@ export type OrderStatus =
     | "pending_payment"
     | "paid"
     | "received"
-    | "preparing"
     | "ready"
     | "collected"
     | "cancelled";
@@ -123,6 +124,11 @@ export type OrderDetail = {
     items: OrderDetailItem[];
 };
 
+export interface CartItemUpgrade {
+    upgradeItemId: string;
+    drinkName: string;
+}
+
 export interface CartItemType {
     id: string;
     name: string;
@@ -131,6 +137,8 @@ export interface CartItemType {
     quantity: number;
     specialRequest?: string;
     categoryId?: string;
+    categoryName?: string;
+    upgrade?: CartItemUpgrade;
 }
 
 export interface CartStore {
@@ -138,14 +146,15 @@ export interface CartStore {
     appliedPromo: { promoId: string; codeUpper: string; discountCents: number } | null;
     isCartOpen: boolean;
     addItem: (item: Omit<CartItemType, "quantity">) => void;
-    removeItem: (id: string, specialRequest?: string) => void;
-    increaseQty: (id: string, specialRequest?: string) => void;
-    decreaseQty: (id: string, specialRequest?: string) => void;
+    removeItem: (id: string, specialRequest?: string, upgradeDrinkName?: string) => void;
+    increaseQty: (id: string, specialRequest?: string, upgradeDrinkName?: string) => void;
+    decreaseQty: (id: string, specialRequest?: string, upgradeDrinkName?: string) => void;
     clearCart: () => void;
     setAppliedPromo: (promo: { promoId: string; codeUpper: string; discountCents: number } | null) => void;
     setCartOpen: (open: boolean) => void;
     getTotalItems: () => number;
     getTotalPrice: () => number;
+    purgeCategoryItems: (categoryIds: string[]) => void;
 }
 
 export type PromoType = "PERCENT" | "FIXED";

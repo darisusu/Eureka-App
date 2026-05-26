@@ -18,6 +18,8 @@ import {
     ORDER_NUMBER_PAD_LENGTH,
     RECENT_ORDERS_LIMIT,
     RPC_CALCULATE_DEPT_READY_AT,
+    SET_MEAL_UPGRADE_DRINKS_CATEGORY_NAME,
+    SET_MEAL_UPGRADE_ITEM_NAME,
     STAFF_ACTIVE_ORDERS_LIMIT,
     STAFF_HISTORY_ORDERS_LIMIT,
     TABLE_CATEGORIES,
@@ -77,7 +79,9 @@ export const getMenu = async ({ category, query }: GetMenuParams) => {
 export const getCategories = async () => {
     const { data, error } = await supabase
         .from(TABLE_CATEGORIES)
-        .select("id, name, description, has_queue");
+        .select("id, name, description, has_queue, available_from, available_until")
+        .order("sort_order")
+        .order("name");
     if (error) throw new Error(error.message);
     return data ?? [];
 };
@@ -364,6 +368,26 @@ export const getDeptConfig = async (categoryIds: string[]): Promise<{ categoryId
         .in("category_id", categoryIds);
     if (error || !data) return [];
     return data.map(r => ({ categoryId: r.category_id, maxWaitMinutes: r.max_wait_minutes ?? DEFAULT_DEPT_MAX_WAIT_MINUTES }));
+};
+
+export const getDrinkMenuItems = async (): Promise<ReturnType<typeof getMenu>> => {
+    const { data: category } = await supabase
+        .from(TABLE_CATEGORIES)
+        .select("id")
+        .eq("name", SET_MEAL_UPGRADE_DRINKS_CATEGORY_NAME)
+        .maybeSingle();
+    if (!category) return [];
+    return getMenu({ category: category.id, query: "" });
+};
+
+export const getSetMealUpgradeItem = async (): Promise<{ id: string } | null> => {
+    const { data, error } = await supabase
+        .from(TABLE_MENU)
+        .select("id")
+        .eq("name", SET_MEAL_UPGRADE_ITEM_NAME)
+        .maybeSingle();
+    if (error || !data) return null;
+    return data as { id: string };
 };
 
 export const validatePromoCode = async ({
