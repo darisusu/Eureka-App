@@ -1,8 +1,9 @@
 "use client";
 
+import { isCategoryAvailable } from "@/lib/time";
 import type { Category } from "@/type";
 import cn from "clsx";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -12,8 +13,8 @@ const Filter = ({ categories }: { categories: Category[] }) => {
   const [active, setActive] = useState(searchParams.get("category") ?? "");
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const filterData: { id: string; name: string }[] = [
-    { id: "", name: "All" },
+  const filterData: (Category | { id: string; name: string; available_from: null; available_until: null })[] = [
+    { id: "", name: "All", available_from: null, available_until: null },
     ...categories,
   ];
 
@@ -48,20 +49,27 @@ const Filter = ({ categories }: { categories: Category[] }) => {
             ref={scrollRef}
             className="flex overflow-x-auto overflow-y-hidden scrollbar-hide flex-1"
           >
-            {filterData.map((item) => (
-              <button
-                key={item.id || "all"}
-                onClick={() => handlePress(item.id)}
-                className={cn(
-                  "flex-shrink-0 px-5 py-3 -mb-px border-b-2 transition-colors whitespace-nowrap",
-                  active === item.id
-                    ? "border-primary text-dark-100 font-bold"
-                    : "border-transparent text-gray-400 font-medium hover:text-dark-100"
-                )}
-              >
-                <span className="body-medium">{item.name}</span>
-              </button>
-            ))}
+            {filterData.map((item) => {
+              const available = isCategoryAvailable(item.available_from, item.available_until);
+              const isActive = active === item.id;
+              return (
+                <button
+                  key={item.id || "all"}
+                  onClick={() => handlePress(item.id)}
+                  className={cn(
+                    "flex-shrink-0 flex items-center gap-1 px-5 py-3 -mb-px border-b-2 transition-colors whitespace-nowrap",
+                    isActive
+                      ? "border-primary text-dark-100 font-bold"
+                      : available
+                      ? "border-transparent text-gray-400 font-medium hover:text-dark-100"
+                      : "border-transparent text-gray-300 font-medium cursor-pointer"
+                  )}
+                >
+                  {!available && <Clock size={11} className="text-gray-300 flex-shrink-0" />}
+                  <span className="body-medium">{item.name}</span>
+                </button>
+              );
+            })}
           </div>
 
           <button
