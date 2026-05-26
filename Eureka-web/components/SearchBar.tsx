@@ -37,7 +37,10 @@ const SearchBar = () => {
         className="flex-1 py-2 px-2 bg-transparent outline-none text-dark-100 paragraph-medium placeholder:text-gray-400"
         placeholder="Search for food you want..."
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          if (!e.target.value) commit("");
+        }}
         onKeyDown={(e) => e.key === "Enter" && commit(query)}
       />
 
