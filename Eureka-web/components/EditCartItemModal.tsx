@@ -125,9 +125,11 @@ const EditCartItemModal = ({
         </div>
 
         {isRestricted && (
-          <p className="text-xs text-amber-600 mt-1 text-right">
-            Max {CATEGORY_ITEM_LIMIT} items for Fish Soup &amp; Zichar
-          </p>
+          <div className="flex justify-end mt-1">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 text-xs text-gray-700 font-medium">
+              Fish Soup &amp; Zichar · {otherRestrictedQty + quantity}/{CATEGORY_ITEM_LIMIT}
+            </span>
+          </div>
         )}
 
         {/* Drink upgrade */}

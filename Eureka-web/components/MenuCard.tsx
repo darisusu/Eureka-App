@@ -11,6 +11,7 @@ import { useCartStore } from "@/store/cart.store";
 import type { MenuItem } from "@/type";
 import { Clock, Plus, X } from "lucide-react";
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 const MenuCard = ({
   item: { id, image_url, name, price, description, category_id },
@@ -24,6 +25,7 @@ const MenuCard = ({
   availableWindow?: string;
 }) => {
   const { addItem } = useCartStore();
+  const setCartOpen = useCartStore((s) => s.setCartOpen);
   const restrictedQty = useCartStore((state) =>
     state.items
       .filter(
@@ -49,6 +51,23 @@ const MenuCard = ({
   const [loadingUpgrade, setLoadingUpgrade] = useState(false);
 
   const handleOpen = () => {
+    if (isAtLimit) {
+      toast(
+        (t) => (
+          <span className="flex items-center gap-2 text-sm">
+            Cart full for Fish Soup &amp; Zichar ({CATEGORY_ITEM_LIMIT}/{CATEGORY_ITEM_LIMIT})
+            <button
+              onClick={() => { setCartOpen(true); toast.dismiss(t.id); }}
+              className="font-semibold text-primary underline whitespace-nowrap"
+            >
+              View Cart
+            </button>
+          </span>
+        ),
+        { duration: 3000 }
+      );
+      return;
+    }
     setSpecialRequest("");
     setSelectedDrinkId(undefined);
     setIsModalVisible(true);
@@ -164,12 +183,10 @@ const MenuCard = ({
             )}
 
             {isRestricted && (
-              <div
-                className={`mt-3 rounded-lg px-3 py-2 text-sm ${isAtLimit ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-700"}`}
-              >
-                {isAtLimit
-                  ? `You've reached the ${CATEGORY_ITEM_LIMIT}-item limit for Fish Soup & Zichar orders.`
-                  : `Fish Soup & Zichar: max ${CATEGORY_ITEM_LIMIT} items per order (${restrictedQty}/${CATEGORY_ITEM_LIMIT}).`}
+              <div className="mt-3">
+                <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-gray-100 text-sm text-gray-700 font-medium">
+                  Fish Soup &amp; Zichar · {restrictedQty}/{CATEGORY_ITEM_LIMIT}
+                </span>
               </div>
             )}
 
@@ -242,8 +259,7 @@ const MenuCard = ({
               </button>
               <button
                 onClick={handleAddToCart}
-                disabled={isAtLimit}
-                className="bg-primary px-4 py-2 rounded-full hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                className="bg-primary px-4 py-2 rounded-full hover:opacity-90 transition-opacity"
               >
                 <span className="paragraph-bold text-white">
                   Add to Cart — ${effectivePrice.toFixed(2)}

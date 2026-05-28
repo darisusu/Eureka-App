@@ -616,8 +616,15 @@ export default function CartDrawer({
           ) : (
             <div className="flex flex-col gap-1">
               {hasRestrictedItems && (
-                <div className={`rounded-xl px-4 py-3 mb-2 text-sm ${restrictedQty >= CATEGORY_ITEM_LIMIT ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-700"}`}>
-                  <span className="font-semibold">Fish Soup & Zichar:</span> limited to {CATEGORY_ITEM_LIMIT} items per order ({restrictedQty}/{CATEGORY_ITEM_LIMIT})
+                <div className="rounded-xl px-4 py-3 mb-2 text-sm bg-amber-50 text-amber-700">
+                  {restrictedQty >= CATEGORY_ITEM_LIMIT ? (
+                    <>
+                      <p className="font-medium">Fish Soup &amp; Zichar cart is full ({CATEGORY_ITEM_LIMIT}/{CATEGORY_ITEM_LIMIT}).</p>
+                      <p>Reduce qty to add different items.</p>
+                    </>
+                  ) : (
+                    <p className="font-medium">Fish Soup &amp; Zichar · {restrictedQty}/{CATEGORY_ITEM_LIMIT}</p>
+                  )}
                 </div>
               )}
               {items.map((item) => (
