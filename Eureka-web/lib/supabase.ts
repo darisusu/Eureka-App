@@ -70,7 +70,22 @@ export const getMenu = async ({ category, query }: GetMenuParams) => {
         .select("id, name, description, image_url, price, category_id, is_available")
         .eq("is_available", true);
     if (category) q = q.eq("category_id", category);
-    if (query) q = q.ilike("name", `%${query}%`);
+    if (query) {
+        if (!category) {
+            const { data: matchingCats } = await supabase
+                .from(TABLE_CATEGORIES)
+                .select("id")
+                .ilike("name", `%${query}%`);
+            const catIds = matchingCats?.map((c) => c.id) ?? [];
+            if (catIds.length > 0) {
+                q = q.or(`name.ilike.%${query}%,category_id.in.(${catIds.join(",")})`);
+            } else {
+                q = q.ilike("name", `%${query}%`);
+            }
+        } else {
+            q = q.ilike("name", `%${query}%`);
+        }
+    }
     const { data, error } = await q;
     if (error) throw new Error(error.message);
     return data ?? [];
