@@ -22,11 +22,11 @@ function TopNav({ onCartOpen }: { onCartOpen: () => void }) {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 bg-white">
-      <div className="flex items-center justify-between px-5 py-3 max-w-5xl mx-auto">
+      <div className="flex items-center justify-between px-5 py-2 max-w-5xl mx-auto">
         <Link href="/search" className="flex items-center gap-0" onClick={handleLogoClick}>
-          <span className="text-primary font-quicksand-bold text-3xl tracking-tight">EurekaGO</span>
+          <span className="text-primary font-quicksand-bold text-2xl tracking-tight">EurekaGO</span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/fish.png" alt="Eureka fish" className="h-[60px] w-auto object-contain -ml-4 mt-2" />
+          <img src="/fish.png" alt="Eureka fish" className="h-[44px] w-auto object-contain -ml-3" />
         </Link>
         <div className="flex items-center gap-2">
           {totalItems > 0 && (
@@ -91,7 +91,7 @@ export default function TabLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <TopNav onCartOpen={() => setCartOpen(true)} />
-      <main className="flex-1 pt-[92px]">
+      <main className="flex-1 pt-[60px]">
         {children}
       </main>
       <CartDrawer isOpen={isCartOpen} onClose={() => setCartOpen(false)} />

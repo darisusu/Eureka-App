@@ -9,15 +9,19 @@ import {
 import { getDrinkMenuItems, getSetMealUpgradeItem } from "@/lib/supabase";
 import { useCartStore } from "@/store/cart.store";
 import type { MenuItem } from "@/type";
-import { Plus, X } from "lucide-react";
+import { Clock, Plus, X } from "lucide-react";
 import { useState } from "react";
 
 const MenuCard = ({
   item: { id, image_url, name, price, description, category_id },
   categoryName,
+  isAvailable = true,
+  availableWindow,
 }: {
   item: MenuItem;
   categoryName?: string;
+  isAvailable?: boolean;
+  availableWindow?: string;
 }) => {
   const { addItem } = useCartStore();
   const restrictedQty = useCartStore((state) =>
@@ -96,25 +100,37 @@ const MenuCard = ({
             <img
               src={image_url}
               alt={name}
-              className="w-full h-36 rounded-2xl object-cover"
+              className={`w-full h-36 rounded-2xl object-cover${!isAvailable ? " opacity-50" : ""}`}
             />
           ) : (
             <div className="w-full h-36 rounded-2xl bg-gray-100" />
           )}
-          <button
-            onClick={handleOpen}
-            className="absolute right-3 bottom-3 bg-primary rounded-full w-10 h-10 flex items-center justify-center hover:opacity-90 transition-opacity"
-          >
-            <Plus size={20} color="white" />
-          </button>
+          {!isAvailable && availableWindow && (
+            <div className="absolute bottom-0 left-0 right-0 bg-black/60 rounded-b-2xl px-3 py-1.5 flex items-center gap-1.5">
+              <Clock size={12} className="text-white flex-shrink-0" />
+              <span className="text-white text-xs font-medium">Available {availableWindow}</span>
+            </div>
+          )}
+          {isAvailable ? (
+            <button
+              onClick={handleOpen}
+              className="absolute right-3 bottom-3 bg-primary rounded-full w-10 h-10 flex items-center justify-center hover:opacity-90 transition-opacity"
+            >
+              <Plus size={20} color="white" />
+            </button>
+          ) : (
+            <div className="absolute right-3 bottom-3 bg-gray-300 rounded-full w-10 h-10 flex items-center justify-center">
+              <Clock size={18} className="text-gray-500" />
+            </div>
+          )}
         </div>
         <div className="mt-3 flex-1">
-          <p className="base-bold text-dark-100 line-clamp-2">{name}</p>
-          <p className="h3-bold text-dark-100 mt-2">${price}</p>
+          <p className={`base-bold line-clamp-2${!isAvailable ? " text-gray-400" : " text-dark-100"}`}>{name}</p>
+          <p className={`h3-bold mt-2${!isAvailable ? " text-gray-400" : " text-dark-100"}`}>${price}</p>
         </div>
       </div>
 
-      {isModalVisible && (
+      {isModalVisible && isAvailable && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-6">
           <div className="bg-white rounded-2xl p-5 w-full max-w-sm max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-x-4">

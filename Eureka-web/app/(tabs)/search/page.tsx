@@ -34,7 +34,7 @@ function SearchInner() {
 
   return (
     <div className="min-h-screen">
-      <div className="bg-white sticky top-[92px] z-30">
+      <div className="bg-white sticky top-[60px] z-30">
         <div className="max-w-5xl mx-auto pt-5 pb-2 px-5">
           <SearchBar />
         </div>
@@ -62,15 +62,16 @@ function SearchInner() {
                   group.category.available_from,
                   group.category.available_until
                 );
+                const window = formatWindow(group.category.available_from, group.category.available_until);
                 return (
-                <div key={group.category.id} className={!available ? "mb-10 opacity-50 pointer-events-none" : "mb-10"}>
+                <div key={group.category.id} className="mb-10">
                   <div className="flex items-baseline gap-2 mb-4">
                     <h2 className="h2-bold text-dark-100">
                       {group.category.name}
                     </h2>
                     {(group.category.available_from && group.category.available_until) && (
                       <span className="text-sm text-gray-400">
-                        Available {formatWindow(group.category.available_from, group.category.available_until)}
+                        Available {window}
                       </span>
                     )}
                   </div>
@@ -81,7 +82,13 @@ function SearchInner() {
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       {group.items.map((item) => (
-                        <MenuCard key={item.id} item={item} categoryName={group.category.name} />
+                        <MenuCard
+                          key={item.id}
+                          item={item}
+                          categoryName={group.category.name}
+                          isAvailable={available}
+                          availableWindow={window || undefined}
+                        />
                       ))}
                     </div>
                   )}
