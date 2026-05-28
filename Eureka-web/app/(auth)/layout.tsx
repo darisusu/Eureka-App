@@ -25,17 +25,17 @@ export default function AuthLayout({
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12">
-      <div className="w-full max-w-sm flex flex-col items-center gap-8">
-        <div className="flex flex-col items-center gap-4">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-8">
+      <div className="w-full max-w-sm flex flex-col items-center gap-6">
+        <div className="flex flex-col items-center gap-2">
           <h1 className="text-2xl font-bold text-dark-100 text-center">
             Welcome to EUREKA
           </h1>
           <Image
             src={fishDefault}
             alt="Eureka mascot"
-            width={180}
-            height={180}
+            width={140}
+            height={140}
             className="object-contain"
           />
         </div>

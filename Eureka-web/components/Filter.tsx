@@ -39,7 +39,7 @@ const Filter = ({ categories }: { categories: Category[] }) => {
         <div className="max-w-5xl mx-auto flex items-center">
           <button
             onClick={() => scroll("left")}
-            className="flex-shrink-0 px-2 py-3 text-gray-400 hover:text-dark-100 transition-colors"
+            className="flex-shrink-0 px-2 py-2 text-gray-400 hover:text-dark-100 transition-colors"
             aria-label="Scroll left"
           >
             <ChevronLeft size={18} />
@@ -57,7 +57,7 @@ const Filter = ({ categories }: { categories: Category[] }) => {
                   key={item.id || "all"}
                   onClick={() => handlePress(item.id)}
                   className={cn(
-                    "flex-shrink-0 flex items-center gap-1 px-5 py-3 -mb-px border-b-2 transition-colors whitespace-nowrap",
+                    "flex-shrink-0 flex items-center gap-1 px-4 py-2 -mb-px border-b-2 transition-colors whitespace-nowrap",
                     isActive
                       ? "border-primary text-dark-100 font-bold"
                       : available
@@ -74,7 +74,7 @@ const Filter = ({ categories }: { categories: Category[] }) => {
 
           <button
             onClick={() => scroll("right")}
-            className="flex-shrink-0 px-2 py-3 text-gray-400 hover:text-dark-100 transition-colors"
+            className="flex-shrink-0 px-2 py-2 text-gray-400 hover:text-dark-100 transition-colors"
             aria-label="Scroll right"
           >
             <ChevronRight size={18} />

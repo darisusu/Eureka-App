@@ -142,7 +142,7 @@
   .h2-bold {
     font-family: 'Quicksand', sans-serif;
     font-weight: 700;
-    @apply text-4xl;
+    @apply text-xl;
   }
 
   .h3-bold {

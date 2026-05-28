@@ -35,14 +35,14 @@ function SearchInner() {
   return (
     <div className="min-h-screen">
       <div className="bg-white sticky top-[60px] z-30">
-        <div className="max-w-5xl mx-auto pt-5 pb-2 px-5">
+        <div className="max-w-5xl mx-auto pt-2.5 pb-2 px-5">
           <SearchBar />
         </div>
         <Filter categories={categories} />
       </div>
 
-      <div className="bg-primary/15 min-h-screen">
-        <div className="max-w-5xl mx-auto px-5 pt-6 pb-40">
+      <div className="min-h-screen">
+        <div className="max-w-5xl mx-auto px-5 pt-5 pb-24">
           {loading ? (
             <p className="paragraph-medium text-gray-400 text-center py-8">
               Loading...
@@ -64,8 +64,8 @@ function SearchInner() {
                 );
                 const window = formatWindow(group.category.available_from, group.category.available_until);
                 return (
-                <div key={group.category.id} className="mb-10">
-                  <div className="flex items-baseline gap-2 mb-4">
+                <div key={group.category.id} className="mb-6">
+                  <div className="flex items-baseline gap-2 mb-3">
                     <h2 className="h2-bold text-dark-100">
                       {group.category.name}
                     </h2>
@@ -80,7 +80,7 @@ function SearchInner() {
                       No menu items at the moment.
                     </p>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {group.items.map((item) => (
                         <MenuCard
                           key={item.id}

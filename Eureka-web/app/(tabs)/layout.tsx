@@ -1,6 +1,7 @@
 "use client";
 
 import CartDrawer from "@/components/CartDrawer";
+import CheckoutBar, { CHECKOUT_BAR_HEIGHT } from "@/components/CheckoutBar";
 import { useCartStore } from "@/store/cart.store";
 import useAuthStore from "@/store/auth.store";
 import { ShoppingBag, User } from "lucide-react";
@@ -10,7 +11,6 @@ import { useEffect } from "react";
 
 function TopNav({ onCartOpen }: { onCartOpen: () => void }) {
   const totalItems = useCartStore((s) => s.getTotalItems());
-  const totalPrice = useCartStore((s) => s.getTotalPrice());
   const pathname = usePathname();
 
   function handleLogoClick(e: React.MouseEvent<HTMLAnchorElement>) {
@@ -29,21 +29,6 @@ function TopNav({ onCartOpen }: { onCartOpen: () => void }) {
           <img src="/fish.png" alt="Eureka fish" className="h-[44px] w-auto object-contain -ml-3" />
         </Link>
         <div className="flex items-center gap-2">
-          {totalItems > 0 && (
-            <button
-              onClick={onCartOpen}
-              className="flex items-center gap-2.5 bg-primary px-3.5 py-1.5 rounded-full hover:opacity-90 transition-opacity"
-              aria-label={`View cart: ${totalItems} items, $${totalPrice.toFixed(2)}`}
-            >
-              <span className="text-white text-sm font-semibold leading-none">
-                {totalItems} {totalItems === 1 ? "item" : "items"}
-              </span>
-              <span className="w-px h-3.5 bg-white/40" />
-              <span className="text-white text-sm font-semibold leading-none">
-                ${totalPrice.toFixed(2)}
-              </span>
-            </button>
-          )}
           <button
             onClick={onCartOpen}
             className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-50 transition-colors"
@@ -75,6 +60,7 @@ export default function TabLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const isCartOpen = useCartStore((s) => s.isCartOpen);
   const setCartOpen = useCartStore((s) => s.setCartOpen);
+  const totalItems = useCartStore((s) => s.getTotalItems());
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -89,12 +75,16 @@ export default function TabLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="min-h-screen flex flex-col bg-primary/15">
       <TopNav onCartOpen={() => setCartOpen(true)} />
-      <main className="flex-1 pt-[60px]">
+      <main
+        className="flex-1 pt-[60px]"
+        style={{ paddingBottom: totalItems > 0 ? CHECKOUT_BAR_HEIGHT : 0 }}
+      >
         {children}
       </main>
       <CartDrawer isOpen={isCartOpen} onClose={() => setCartOpen(false)} />
+      <CheckoutBar onOpen={() => setCartOpen(true)} />
     </div>
   );
 }

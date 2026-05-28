@@ -51,10 +51,10 @@ export default function Profile() {
 
   return (
     <div className="bg-white min-h-screen overflow-y-auto">
-      <div className="max-w-lg mx-auto px-6 pt-8 pb-24">
+      <div className="max-w-lg mx-auto px-6 pt-6 pb-16">
         <Link
           href="/search"
-          className="flex items-center gap-1.5 text-gray-100 hover:text-dark-100 transition-colors mb-6 -ml-0.5 w-fit"
+          className="flex items-center gap-1.5 text-gray-100 hover:text-dark-100 transition-colors mb-4 -ml-0.5 w-fit"
         >
           <ArrowLeft size={17} strokeWidth={2.5} />
           <span className="body-medium">Back to Menu</span>
@@ -62,19 +62,19 @@ export default function Profile() {
 
         <h1 className="h1-bold text-dark-100">Profile</h1>
 
-        <div className="mt-6">
+        <div className="mt-4">
           <p className="paragraph-bold text-dark-100">Name</p>
           <p className="paragraph-medium text-gray-100 mt-1">{user?.name ?? "—"}</p>
         </div>
 
-        <div className="mt-4">
+        <div className="mt-3">
           <p className="paragraph-bold text-dark-100">Phone</p>
           <p className="paragraph-medium text-gray-100 mt-1">{user?.phone ?? "—"}</p>
         </div>
 
-        <div className="mt-8">
+        <div className="mt-5">
           <h2 className="h3-bold text-dark-100">Recent Orders</h2>
-          <div className="mt-4 flex flex-col gap-4">
+          <div className="mt-3 flex flex-col gap-2.5">
             {isOrdersLoading ? (
               <p className="paragraph-medium text-gray-200">Loading recent orders...</p>
             ) : recentOrders.length === 0 ? (
@@ -99,10 +99,10 @@ export default function Profile() {
                         <ChevronRight size={15} className="text-gray-100 flex-shrink-0" />
                       </div>
                     </div>
-                    <p className="body-regular text-gray-100 mt-2 line-clamp-1">
+                    <p className="body-regular text-gray-100 mt-1.5 line-clamp-1">
                       {order.itemsSummary}
                     </p>
-                    <div className="flex justify-between items-center mt-3">
+                    <div className="flex justify-between items-center mt-2">
                       <span className="paragraph-bold text-dark-100">
                         ${order.total.toFixed(2)}
                       </span>
@@ -119,7 +119,7 @@ export default function Profile() {
 
         <CustomButton
           title="Log out"
-          className="mt-10 bg-red-500"
+          className="mt-6 bg-red-500"
           leftIcon={<LogOut size={18} color="#fff" className="mr-2" />}
           isLoading={isSigningOut}
           onClick={handleSignOut}
