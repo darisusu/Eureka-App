@@ -12,10 +12,12 @@ import { useEffect } from "react";
 function TopNav({ onCartOpen }: { onCartOpen: () => void }) {
   const totalItems = useCartStore((s) => s.getTotalItems());
   const pathname = usePathname();
+  const router = useRouter();
 
   function handleLogoClick(e: React.MouseEvent<HTMLAnchorElement>) {
     if (pathname === "/search") {
       e.preventDefault();
+      router.push("/search");
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }

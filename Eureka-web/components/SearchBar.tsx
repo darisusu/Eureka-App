@@ -2,12 +2,16 @@
 
 import { Search, XCircle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const SearchBar = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("query") ?? "");
+
+  useEffect(() => {
+    setQuery(searchParams.get("query") ?? "");
+  }, [searchParams]);
 
   const commit = (text: string) => {
     const params = new URLSearchParams(searchParams.toString());

@@ -184,8 +184,8 @@ const MenuCard = ({
 
             {isRestricted && (
               <div className="mt-3">
-                <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-gray-100 text-sm text-gray-700 font-medium">
-                  Fish Soup &amp; Zichar · {restrictedQty}/{CATEGORY_ITEM_LIMIT}
+                <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-amber-50 text-sm text-amber-700 font-medium">
+                  Fish Soup &amp; Zichar · {restrictedQty}/{CATEGORY_ITEM_LIMIT} in cart
                 </span>
               </div>
             )}

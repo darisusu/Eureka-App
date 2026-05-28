@@ -623,7 +623,7 @@ export default function CartDrawer({
                       <p>Reduce qty to add different items.</p>
                     </>
                   ) : (
-                    <p className="font-medium">Fish Soup &amp; Zichar · {restrictedQty}/{CATEGORY_ITEM_LIMIT}</p>
+                    <p className="font-medium">Fish Soup &amp; Zichar · {restrictedQty}/{CATEGORY_ITEM_LIMIT} in cart</p>
                   )}
                 </div>
               )}
