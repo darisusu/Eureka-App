@@ -77,7 +77,11 @@ Standard Appwrite Auth: `account.create()` registers an account, `account.create
 ### Web (`Eureka-web`)
 - Sign-up and sign-in flows (phone-only, with role-based redirect); staff sign-in requires PIN
 - Menu browsing: text search (ilike), filter by category; items displayed grouped by category with section headers; responsive 3-column grid on desktop, single column on mobile
-- Cart: add/remove/increase/decrease qty; same item with different `specialRequest` values becomes a separate line item; `categoryId` stored per item for ETA calculation; cart is a slide-in drawer (`CartDrawer`) opened from the top nav — no separate `/cart` page (redirects to `/search`)
+- Cart: add/remove/increase/decrease qty; `categoryId` stored per item for ETA calculation; cart is a slide-in drawer (`CartDrawer`) opened from the top nav — no separate `/cart` page (redirects to `/search`)
+  - **Fish Soup items** open `FishSoupConfigModal` which requires soup type and base selection (required), add-ons (optional checkboxes), a set meal drink upgrade (optional, same picker as other categories), and a special request field. The fish soup config (soup/base/add-ons) is stored as `fishSoupConfig` on the cart item; soup/base/add-on price adders are fetched from `menu_option_groups` / `menu_options` tables.
+  - **Set meal upgrade**: available for all categories except those in `SET_MEAL_UPGRADE_EXCLUDED_CATEGORIES` (`["Drinks", "Zichar Add-ons"]`). Adds a drink to the order as a separate `order_items` row. Upgrade price is fetched from the hidden "Set Meal Upgrade" menu item in Supabase (`is_available = false`) and stored on `CartItemUpgrade.upgradePrice` — there is no hardcoded price constant.
+  - **Special request**: shown for all categories except those in `SPECIAL_REQUEST_EXCLUDED_CATEGORIES` (`["Drinks"]`).
+  - Two items are considered identical (and their qty merged) only if they share the same menu item ID, `specialRequest`, upgrade drink name, and `fishSoupConfig` key. Any difference creates a new line item.
 - Pre-checkout ETA: `POST /api/estimate-eta` called from the cart drawer to show estimated wait before checkout
 - Promo code redemption: validated server-side via `/api/calculate-cart`; `PERCENT` and `FIXED` types, per-user usage limit, min subtotal, max discount cap; race condition protected by `UNIQUE(promo_id, user_id)` DB constraint
 - Checkout: `/api/create-checkout` creates order + Stripe PaymentIntent + `order_dept_slots` (via `calculate_dept_ready_at` RPC); if `totalCents === 0` order is marked received immediately; returns `readyAt`
@@ -99,11 +103,13 @@ Schema source: `Eureka-web/supabase-schema.sql`
 | Table | Key columns |
 |---|---|
 | `users` | `id` (uuid pk), `name`, `phone` (unique), `role` ("customer"\|"staff"), `pin_hash`, `created_at` |
-| `categories` | `id`, `name`, `description`, `has_queue` |
+| `categories` | `id`, `name`, `description`, `has_queue`, `available_from`, `available_until`, `parent_category_id` (nullable fk → self) | Active: Fish Soup, Zichar (4-item cart limit), Zichar Add-ons (has_queue=false, no cart limit, inherits availability from Zichar via `parent_category_id`), Drinks, Porridge |
 | `dept_config` | `id`, `category_id` (fk), `base_prep_minutes`, `gap_minutes`, `max_wait_minutes` |
 | `menu` | `id`, `name`, `description`, `image_url`, `price` (numeric dollars), `category_id` (fk), `is_available` |
+| `menu_option_groups` | `id`, `category_id` (fk), `name`, `selection_type` ("single"\|"multi"), `is_required`, `sort_order` — groups like "Choose Soup", "Choose Base", "Add-ons" |
+| `menu_options` | `id`, `group_id` (fk), `name`, `price_adder` (numeric dollars), `is_available`, `sort_order` — individual choices within a group |
 | `orders` | `id`, `user_id` (fk), `total` (numeric dollars), `order_number` (int, resets daily at 4am SGT via `daily_order_counter`), `is_paid`, `status`, `ready_at`, `updated_at`, `promo_id`, `promo_code`, `discount_cents`, `payment_intent_id`, `created_at` |
-| `order_items` | `id`, `order_id` (fk), `menu_id` (fk), `name`, `price`, `qty`, `special_request` |
+| `order_items` | `id`, `order_id` (fk), `menu_id` (fk), `name`, `price`, `qty`, `special_request`, `config` (JSONB — stores `FishSoupConfig` for Fish Soup items) |
 | `order_dept_slots` | `id`, `order_id` (fk), `category_id` (fk), `dept_ready_at` |
 | `promo_codes` | `id`, `code_upper` (unique), `is_active`, `type` ("PERCENT"\|"FIXED"), `value`, `max_discount_cents`, `min_subtotal_cents`, `usage_limit_per_user` |
 | `promo_redemptions` | `id`, `promo_id` (fk), `user_id` (fk), `order_id` (fk), `redeemed_at`, `discount_cents` |
@@ -163,12 +169,16 @@ STRIPE_CURRENCY
 
 **Customer order UX is intentionally minimal.** Customers see estimated wait time and a "ready for collection" banner — no intermediate status steps. No cancel button is exposed to customers; orders can only be cancelled by editing the DB directly.
 
-**All tuneable constants live in `lib/config.ts`.** This is the single source of truth for values like `RECENT_ORDERS_LIMIT`, polling intervals, query limits, order number padding, and the fallback `DEFAULT_DEPT_MAX_WAIT_MINUTES`. Supabase table names and the `calculate_dept_ready_at` RPC name are also exported from there. DB-only settings (dept_config values, daily reset trigger, RLS) are documented with comments in the same file.
+**All tuneable constants live in `lib/config.ts`.** This is the single source of truth for values like `RECENT_ORDERS_LIMIT`, polling intervals, query limits, order number padding, the fallback `DEFAULT_DEPT_MAX_WAIT_MINUTES`, `SET_MEAL_UPGRADE_EXCLUDED_CATEGORIES`, and `SPECIAL_REQUEST_EXCLUDED_CATEGORIES`. Supabase table names and the `calculate_dept_ready_at` RPC name are also exported from there. DB-only settings (dept_config values, daily reset trigger, RLS) are documented with comments in the same file.
 
 **Staff polling, not Realtime.** Web polls Supabase every `STAFF_ACTIVE_ORDERS_POLL_MS` (default 10 s) for active orders and every `STAFF_HISTORY_POLL_MS` (default 15 s) for history. Both are in `lib/config.ts`.
 
-**Cart is not persisted.** `cart.store.ts` is plain Zustand with no `persist` middleware — cart is lost on page refresh.
+**Cart is persisted to `sessionStorage`, not `localStorage`.** `cart.store.ts` uses Zustand `persist` with `sessionStorage` (`name: "eureka-cart"`). Cart survives page refreshes within the same tab but is cleared when the tab is closed.
 
 **Orders store IS persisted.** `orders.store.ts` uses Zustand `persist` to localStorage (`name: "recent-orders"`) to keep up to `RECENT_ORDERS_LIMIT` orders across sessions. The limit is defined in `lib/config.ts`.
 
-**Each app has its own seed script.** `Eureka-web/lib/seed.ts` targets Supabase (seeds Drinks / Porridge / Fish Soup categories with matching menu items); run with `npx tsx --env-file=.env.local lib/seed.ts`. `Eureka-mobile/lib/seed.ts` + `lib/data.ts` target Appwrite; run with `npx tsx lib/seed.ts`. Never run either against production.
+**Category availability can be inherited from a parent category.** `categories.parent_category_id` is a nullable self-FK. When set, `resolveParentTiming()` in `lib/time.ts` replaces the child's `available_from`/`available_until` with the parent's values — both client-side (`getCategories`) and server-side (API routes). Currently used so Zichar Add-ons inherits its availability window from Zichar.
+
+**Set meal upgrade price is DB-authoritative.** There is no hardcoded price constant for the drink upgrade. `getSetMealUpgradeItem()` fetches both the `id` and `price` of the hidden "Set Meal Upgrade" menu item from Supabase, and the price is stored on `CartItemUpgrade.upgradePrice` at the moment the customer picks a drink. All client-side display (modal labels, cart totals) reads from `item.upgrade.upgradePrice`; the server charges whatever price the DB row has. To change the upgrade price, update the menu row in Supabase only.
+
+**Each app has its own seed script.** `Eureka-web/lib/seed.ts` targets Supabase (seeds Drinks / Porridge / Fish Soup categories with matching menu items — note: Zichar and Zichar Add-ons are managed directly via Supabase SQL, not this seed script); run with `npx tsx --env-file=.env.local lib/seed.ts`. `Eureka-mobile/lib/seed.ts` + `lib/data.ts` target Appwrite; run with `npx tsx lib/seed.ts`. Never run either against production.
