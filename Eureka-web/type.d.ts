@@ -15,6 +15,7 @@ export interface Category {
     has_queue: boolean;
     available_from: string | null;
     available_until: string | null;
+    parent_category_id?: string | null;
 }
 
 export type User = {
@@ -126,9 +127,44 @@ export type OrderDetail = {
     items: OrderDetailItem[];
 };
 
+export interface MenuOption {
+    id: string;
+    group_id: string;
+    name: string;
+    price_adder: number;
+    is_available: boolean;
+    sort_order: number;
+}
+
+export interface MenuOptionGroup {
+    id: string;
+    category_id: string;
+    name: string;
+    description: string | null;
+    selection_type: "single" | "multi";
+    is_required: boolean;
+    sort_order: number;
+    options: MenuOption[];
+}
+
+export interface FishSoupSelectedOption {
+    groupId: string;
+    groupName: string;
+    optionId: string;
+    optionName: string;
+    priceAdder: number;
+}
+
+export interface FishSoupConfig {
+    soupOption: FishSoupSelectedOption;
+    baseOption: FishSoupSelectedOption;
+    addOns: FishSoupSelectedOption[];
+}
+
 export interface CartItemUpgrade {
     upgradeItemId: string;
     drinkName: string;
+    upgradePrice: number;
 }
 
 export interface CartItemType {
@@ -141,6 +177,7 @@ export interface CartItemType {
     categoryId?: string;
     categoryName?: string;
     upgrade?: CartItemUpgrade;
+    fishSoupConfig?: FishSoupConfig;
 }
 
 export interface CartStore {
@@ -148,9 +185,9 @@ export interface CartStore {
     appliedPromo: { promoId: string; codeUpper: string; discountCents: number } | null;
     isCartOpen: boolean;
     addItem: (item: Omit<CartItemType, "quantity">) => void;
-    removeItem: (id: string, specialRequest?: string, upgradeDrinkName?: string) => void;
-    increaseQty: (id: string, specialRequest?: string, upgradeDrinkName?: string) => void;
-    decreaseQty: (id: string, specialRequest?: string, upgradeDrinkName?: string) => void;
+    removeItem: (id: string, specialRequest?: string, upgradeDrinkName?: string, fishSoupConfig?: FishSoupConfig) => void;
+    increaseQty: (id: string, specialRequest?: string, upgradeDrinkName?: string, fishSoupConfig?: FishSoupConfig) => void;
+    decreaseQty: (id: string, specialRequest?: string, upgradeDrinkName?: string, fishSoupConfig?: FishSoupConfig) => void;
     clearCart: () => void;
     setAppliedPromo: (promo: { promoId: string; codeUpper: string; discountCents: number } | null) => void;
     setCartOpen: (open: boolean) => void;
@@ -161,7 +198,8 @@ export interface CartStore {
         id: string,
         oldSpecialRequest: string | undefined,
         oldUpgradeDrinkName: string | undefined,
-        updates: { specialRequest?: string; upgrade?: CartItemUpgrade; quantity: number }
+        updates: { specialRequest?: string; upgrade?: CartItemUpgrade; quantity: number; fishSoupConfig?: FishSoupConfig },
+        oldFishSoupConfig?: FishSoupConfig
     ) => void;
 }
 

@@ -26,6 +26,19 @@ export const isCategoryAvailable = (
     return now >= available_from.slice(0, 5) && now <= available_until.slice(0, 5);
 };
 
+// For categories with parent_category_id, replaces available_from/until with the parent's values.
+export const resolveParentTiming = <T extends { id: string; parent_category_id?: string | null; available_from: string | null; available_until: string | null }>(
+    cats: T[]
+): T[] => {
+    const byId = new Map(cats.map((c) => [c.id, c]));
+    return cats.map((c) => {
+        if (!c.parent_category_id) return c;
+        const parent = byId.get(c.parent_category_id);
+        if (!parent) return c;
+        return { ...c, available_from: parent.available_from, available_until: parent.available_until };
+    });
+};
+
 // Formats a time window as "10am – 2.30pm"
 export const formatWindow = (from: string | null, until: string | null): string => {
     if (!from || !until) return "";
