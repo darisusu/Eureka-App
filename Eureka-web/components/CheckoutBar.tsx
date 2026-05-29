@@ -7,11 +7,9 @@ export const CHECKOUT_BAR_HEIGHT = 80;
 
 const CheckoutBar = ({ onOpen }: { onOpen: () => void }) => {
   const items = useCartStore((state) => state.items);
+  const getTotalPrice = useCartStore((state) => state.getTotalPrice);
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = items.reduce(
-    (sum, item) => sum + item.quantity * item.price,
-    0
-  );
+  const totalPrice = getTotalPrice();
 
   if (totalItems === 0) return null;
 
