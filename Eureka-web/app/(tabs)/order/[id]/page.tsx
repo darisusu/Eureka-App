@@ -129,8 +129,8 @@ export default function OrderDetailPage() {
                           {item.name}
                         </p>
                         {item.specialRequest && (
-                          <p className="body-regular text-gray-100 mt-0.5 italic">
-                            {item.specialRequest}
+                          <p className="body-regular text-gray-100 mt-0.5 italic whitespace-pre-line">
+                            {item.specialRequest.replace(/ · Base:/g, "\nBase:").replace(/ · Add-ons:/g, "\nAdd-ons:")}
                           </p>
                         )}
                       </div>
