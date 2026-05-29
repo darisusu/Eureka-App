@@ -4,6 +4,7 @@ import CartDrawer from "@/components/CartDrawer";
 import CheckoutBar, { CHECKOUT_BAR_HEIGHT } from "@/components/CheckoutBar";
 import { useCartStore } from "@/store/cart.store";
 import useAuthStore from "@/store/auth.store";
+import { CATEGORY_ITEM_LIMIT, CATEGORY_ITEM_LIMIT_NAMES } from "@/lib/config";
 import { ShoppingBag, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -11,6 +12,11 @@ import { useEffect } from "react";
 
 function TopNav({ onCartOpen }: { onCartOpen: () => void }) {
   const totalItems = useCartStore((s) => s.getTotalItems());
+  const restrictedQty = useCartStore((s) =>
+    s.items
+      .filter((i) => i.categoryName && CATEGORY_ITEM_LIMIT_NAMES.includes(i.categoryName))
+      .reduce((sum, i) => sum + i.quantity, 0)
+  );
   const pathname = usePathname();
   const router = useRouter();
 
@@ -40,6 +46,11 @@ function TopNav({ onCartOpen }: { onCartOpen: () => void }) {
             {totalItems > 0 && (
               <span className="absolute top-0.5 right-0.5 flex items-center justify-center w-4 h-4 bg-primary text-white text-[10px] font-bold rounded-full">
                 {totalItems > 9 ? "9+" : totalItems}
+              </span>
+            )}
+            {restrictedQty > 0 && (
+              <span className="absolute -bottom-0.5 -left-0.5 flex items-center justify-center px-1 min-w-[20px] h-4 bg-amber-500 text-white text-[9px] font-bold rounded-full leading-none">
+                {restrictedQty}/{CATEGORY_ITEM_LIMIT}
               </span>
             )}
           </button>
