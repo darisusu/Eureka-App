@@ -1,4 +1,4 @@
-import { TABLE_CATEGORIES, TABLE_MENU, TABLE_PROMO_CODES, TABLE_PROMO_REDEMPTIONS } from "@/lib/config";
+import { TABLE_CATEGORIES, TABLE_MENU, TABLE_MENU_OPTIONS, TABLE_PROMO_CODES, TABLE_PROMO_REDEMPTIONS } from "@/lib/config";
 import { formatWindow, nowSGT } from "@/lib/time";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
@@ -11,7 +11,7 @@ const supabase = createClient(
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const items: { menuId?: string; quantity?: number }[] = Array.isArray(body.items) ? body.items : [];
+        const items: { menuId?: string; quantity?: number; fishSoupOptionIds?: string[] }[] = Array.isArray(body.items) ? body.items : [];
         const promoCodeRaw: string = typeof body.promoCode === "string" ? body.promoCode : "";
         const userId: string = typeof body.userId === "string" ? body.userId : "";
 
@@ -33,23 +33,42 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ ok: false, message: "Failed to fetch menu." }, { status: 500 });
         }
 
-        // Category availability check
+        // Fetch option price adders for any fish soup items
+        const allOptionIds = [...new Set(items.flatMap(i => i.fishSoupOptionIds ?? []))];
+        const optionAdderById = new Map<string, number>();
+        if (allOptionIds.length > 0) {
+            const { data: optionRows } = await supabase
+                .from(TABLE_MENU_OPTIONS)
+                .select("id, price_adder")
+                .in("id", allOptionIds);
+            for (const o of optionRows ?? []) {
+                optionAdderById.set(o.id, Number(o.price_adder));
+            }
+        }
+
+        // Category availability check (resolves parent timing for inherited categories)
         const cartCategoryIds = [...new Set(
             (menuRows ?? []).map(m => m.category_id).filter(Boolean)
         )] as string[];
 
         if (cartCategoryIds.length > 0) {
-            const { data: catRows } = await supabase
+            const { data: allCats } = await supabase
                 .from(TABLE_CATEGORIES)
-                .select("id, name, available_from, available_until")
-                .in("id", cartCategoryIds);
+                .select("id, name, available_from, available_until, parent_category_id");
 
+            const catById = new Map((allCats ?? []).map(c => [c.id, c]));
             const now = nowSGT();
-            for (const cat of catRows ?? []) {
-                if (cat.available_from && cat.available_until) {
-                    if (now < cat.available_from.slice(0, 5) || now > cat.available_until.slice(0, 5)) {
+
+            for (const catId of cartCategoryIds) {
+                const cat = catById.get(catId);
+                if (!cat) continue;
+                const source = cat.parent_category_id ? catById.get(cat.parent_category_id) : cat;
+                const from = source?.available_from ?? null;
+                const until = source?.available_until ?? null;
+                if (from && until) {
+                    if (now < from.slice(0, 5) || now > until.slice(0, 5)) {
                         return NextResponse.json(
-                            { ok: false, message: `${cat.name} is not available right now (available ${formatWindow(cat.available_from, cat.available_until)}).` },
+                            { ok: false, message: `${cat.name} is not available right now (available ${formatWindow(from, until)}).` },
                             { status: 400 }
                         );
                     }
@@ -62,11 +81,13 @@ export async function POST(req: NextRequest) {
         let subtotalCents = 0;
         for (const item of items) {
             if (!item.menuId || (item.quantity ?? 0) <= 0) continue;
-            const price = priceById.get(item.menuId);
-            if (typeof price !== "number") {
+            const basePrice = priceById.get(item.menuId);
+            if (typeof basePrice !== "number") {
                 return NextResponse.json({ ok: false, message: "Menu item not found." }, { status: 400 });
             }
-            subtotalCents += Math.round(price * 100) * Number(item.quantity);
+            const optionAdder = (item.fishSoupOptionIds ?? [])
+                .reduce((sum, oid) => sum + (optionAdderById.get(oid) ?? 0), 0);
+            subtotalCents += Math.round((basePrice + optionAdder) * 100) * Number(item.quantity);
         }
 
         let promo = null;

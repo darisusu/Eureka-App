@@ -4,7 +4,7 @@ import {
   CATEGORY_ITEM_LIMIT,
   CATEGORY_ITEM_LIMIT_NAMES,
   SET_MEAL_UPGRADE_EXCLUDED_CATEGORIES,
-  SET_MEAL_UPGRADE_PRICE,
+  SPECIAL_REQUEST_EXCLUDED_CATEGORIES,
 } from "@/lib/config";
 import { getDrinkMenuItems, getSetMealUpgradeItem } from "@/lib/supabase";
 import { useCartStore } from "@/store/cart.store";
@@ -28,30 +28,29 @@ const EditCartItemModal = ({
 
   const isRestricted = !!item.categoryName && CATEGORY_ITEM_LIMIT_NAMES.includes(item.categoryName);
   const showUpgrade =
-    !!item.categoryName && !SET_MEAL_UPGRADE_EXCLUDED_CATEGORIES.includes(item.categoryName);
+    !!item.categoryName &&
+    !SET_MEAL_UPGRADE_EXCLUDED_CATEGORIES.includes(item.categoryName);
+  const showSpecialRequest =
+    !item.categoryName || !SPECIAL_REQUEST_EXCLUDED_CATEGORIES.includes(item.categoryName);
 
   const [specialRequest, setSpecialRequest] = useState(item.specialRequest ?? "");
   const [quantity, setQuantity] = useState(item.quantity);
   const [drinkOptions, setDrinkOptions] = useState<MenuItem[]>([]);
-  const [upgradeItemId, setUpgradeItemId] = useState<string | null>(null);
+  const [upgradeItem, setUpgradeItem] = useState<{ id: string; price: number } | null>(null);
   const [selectedDrinkId, setSelectedDrinkId] = useState<string | null | undefined>(undefined);
   const [loadingUpgrade, setLoadingUpgrade] = useState(false);
 
-  // Compute the max allowed quantity for restricted items
-  const otherRestrictedQty = isRestricted
-    ? restrictedQty - item.quantity
-    : 0;
+  const otherRestrictedQty = isRestricted ? restrictedQty - item.quantity : 0;
   const maxQty = isRestricted ? CATEGORY_ITEM_LIMIT - otherRestrictedQty : 99;
 
   useEffect(() => {
     if (!showUpgrade) return;
     setLoadingUpgrade(true);
     Promise.all([getDrinkMenuItems(), getSetMealUpgradeItem()])
-      .then(([drinks, upgradeItemData]) => {
+      .then(([drinks, fetchedUpgradeItem]) => {
         const drinkList = drinks as MenuItem[];
         setDrinkOptions(drinkList);
-        setUpgradeItemId(upgradeItemData?.id ?? null);
-        // Pre-select the drink that was previously chosen
+        setUpgradeItem(fetchedUpgradeItem);
         if (item.upgrade?.drinkName) {
           const match = drinkList.find((d) => d.name === item.upgrade!.drinkName);
           setSelectedDrinkId(match?.id ?? null);
@@ -61,26 +60,44 @@ const EditCartItemModal = ({
       })
       .catch(() => setSelectedDrinkId(null))
       .finally(() => setLoadingUpgrade(false));
-  // Only run once on mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const upgradeAvailable = !loadingUpgrade && !!upgradeItemId && drinkOptions.length > 0;
+  const upgradeAvailable = !loadingUpgrade && !!upgradeItem && drinkOptions.length > 0;
+  const upgradePrice = upgradeItem?.price ?? (item.upgrade?.upgradePrice ?? 0);
   const selectedDrink = selectedDrinkId ? drinkOptions.find((d) => d.id === selectedDrinkId) : null;
-  const effectiveUnitPrice = item.price + (selectedDrink && upgradeAvailable ? SET_MEAL_UPGRADE_PRICE : 0);
+  const fishSoupAdder = item.fishSoupConfig
+    ? item.fishSoupConfig.soupOption.priceAdder
+      + item.fishSoupConfig.baseOption.priceAdder
+      + item.fishSoupConfig.addOns.reduce((s, a) => s + a.priceAdder, 0)
+    : 0;
+  const effectiveUnitPrice = item.price
+    + (selectedDrink && upgradeAvailable ? upgradePrice : 0)
+    + fishSoupAdder;
 
   const handleSave = () => {
     const upgrade =
-      selectedDrink && upgradeItemId
-        ? { upgradeItemId, drinkName: selectedDrink.name }
+      selectedDrink && upgradeItem && upgradeAvailable
+        ? { upgradeItemId: upgradeItem.id, drinkName: selectedDrink.name, upgradePrice: upgradeItem.price }
         : undefined;
     updateItem(item.id, item.specialRequest, item.upgrade?.drinkName, {
-      specialRequest: specialRequest.trim() || undefined,
+      specialRequest: showSpecialRequest ? (specialRequest.trim() || undefined) : undefined,
       upgrade,
       quantity,
-    });
+      fishSoupConfig: item.fishSoupConfig,
+    }, item.fishSoupConfig);
     onClose();
   };
+
+  const fishSoupLines = item.fishSoupConfig
+    ? [
+        `Soup: ${item.fishSoupConfig.soupOption.optionName}`,
+        `Base: ${item.fishSoupConfig.baseOption.optionName}`,
+        ...(item.fishSoupConfig.addOns.length > 0
+          ? [`Add-ons: ${item.fishSoupConfig.addOns.map((a) => a.optionName).join(", ")}`]
+          : []),
+      ]
+    : null;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center px-6">
@@ -102,6 +119,17 @@ const EditCartItemModal = ({
             <X size={20} className="text-gray-400" />
           </button>
         </div>
+
+        {/* Fish Soup config summary (read-only) */}
+        {fishSoupLines && (
+          <div className="mt-3 px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
+            <p className="text-xs font-medium text-gray-400 mb-1">Your selection</p>
+            {fishSoupLines.map((line, i) => (
+              <p key={i} className="text-sm text-dark-100 leading-snug">{line}</p>
+            ))}
+            <p className="text-xs text-gray-400 mt-1.5">Remove and re-add to change options.</p>
+          </div>
+        )}
 
         {/* Quantity */}
         <div className="mt-4 flex items-center justify-between">
@@ -132,12 +160,12 @@ const EditCartItemModal = ({
           </div>
         )}
 
-        {/* Drink upgrade */}
+        {/* Drink upgrade (non-fish-soup items only) */}
         {showUpgrade && (loadingUpgrade || upgradeAvailable) && (
           <div className="mt-4 border-t border-gray-100 pt-4">
             <div className="flex items-center justify-between mb-1">
               <p className="paragraph-bold text-dark-100">
-                Make it a set (+${SET_MEAL_UPGRADE_PRICE.toFixed(2)})
+                Make it a set (+${upgradePrice.toFixed(2)})
               </p>
               <p className="text-xs text-gray-400">Choose max 1 (optional)</p>
             </div>
@@ -175,16 +203,19 @@ const EditCartItemModal = ({
           </div>
         )}
 
-        {/* Special request */}
-        <p className="body-regular text-gray-200 mt-4">Special request</p>
-        <textarea
-          className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm leading-5 resize-none outline-none focus:border-primary"
-          placeholder="(Subject to availability)"
-          maxLength={200}
-          rows={3}
-          value={specialRequest}
-          onChange={(e) => setSpecialRequest(e.target.value)}
-        />
+        {showSpecialRequest && (
+          <>
+            <p className="body-regular text-gray-200 mt-4">Special request</p>
+            <textarea
+              className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2.5 text-base leading-5 resize-none outline-none focus:border-primary"
+              placeholder="(Subject to availability)"
+              maxLength={200}
+              rows={3}
+              value={specialRequest}
+              onChange={(e) => setSpecialRequest(e.target.value)}
+            />
+          </>
+        )}
 
         {/* Actions */}
         <div className="flex justify-end gap-x-3 mt-5">

@@ -3,6 +3,7 @@ import {
     RPC_CALCULATE_DEPT_READY_AT,
     TABLE_CATEGORIES,
     TABLE_MENU,
+    TABLE_MENU_OPTIONS,
     TABLE_ORDER_DEPT_SLOTS,
     TABLE_ORDER_ITEMS,
     TABLE_ORDERS,
@@ -128,7 +129,7 @@ export async function POST(req: NextRequest) {
         }
 
         // ── Create path ────────────────────────────────────────────────────────
-        const items: { menuId?: string; quantity?: number; specialRequest?: string }[] = Array.isArray(body.items) ? body.items : [];
+        const items: { menuId?: string; quantity?: number; specialRequest?: string; fishSoupOptionIds?: string[]; fishSoupConfig?: unknown }[] = Array.isArray(body.items) ? body.items : [];
         const promoCodeRaw: string = typeof body.promoCode === "string" ? body.promoCode : "";
         const userId: string = typeof body.userId === "string" ? body.userId : "";
 
@@ -143,23 +144,42 @@ export async function POST(req: NextRequest) {
 
         if (menuError) return NextResponse.json({ ok: false, message: "Failed to fetch menu." }, { status: 500 });
 
-        // Category availability check
+        // Fetch option price adders for any fish soup items
+        const allOptionIds = [...new Set(items.flatMap(i => i.fishSoupOptionIds ?? []))];
+        const optionAdderById = new Map<string, number>();
+        if (allOptionIds.length > 0) {
+            const { data: optionRows } = await supabase
+                .from(TABLE_MENU_OPTIONS)
+                .select("id, price_adder")
+                .in("id", allOptionIds);
+            for (const o of optionRows ?? []) {
+                optionAdderById.set(o.id, Number(o.price_adder));
+            }
+        }
+
+        // Category availability check (resolves parent timing for inherited categories)
         const cartCategoryIds = [...new Set(
             (menuRows ?? []).map(m => m.category_id).filter(Boolean)
         )] as string[];
 
         if (cartCategoryIds.length > 0) {
-            const { data: catRows } = await supabase
+            const { data: allCats } = await supabase
                 .from(TABLE_CATEGORIES)
-                .select("id, name, available_from, available_until")
-                .in("id", cartCategoryIds);
+                .select("id, name, available_from, available_until, parent_category_id");
 
+            const catById = new Map((allCats ?? []).map(c => [c.id, c]));
             const now = nowSGT();
-            for (const cat of catRows ?? []) {
-                if (cat.available_from && cat.available_until) {
-                    if (now < cat.available_from.slice(0, 5) || now > cat.available_until.slice(0, 5)) {
+
+            for (const catId of cartCategoryIds) {
+                const cat = catById.get(catId);
+                if (!cat) continue;
+                const source = cat.parent_category_id ? catById.get(cat.parent_category_id) : cat;
+                const from = source?.available_from ?? null;
+                const until = source?.available_until ?? null;
+                if (from && until) {
+                    if (now < from.slice(0, 5) || now > until.slice(0, 5)) {
                         return NextResponse.json(
-                            { ok: false, message: `${cat.name} is not available right now (available ${formatWindow(cat.available_from, cat.available_until)}).` },
+                            { ok: false, message: `${cat.name} is not available right now (available ${formatWindow(from, until)}).` },
                             { status: 400 }
                         );
                     }
@@ -174,7 +194,9 @@ export async function POST(req: NextRequest) {
             if (!item.menuId || (item.quantity ?? 0) <= 0) continue;
             const menu = menuById.get(item.menuId);
             if (!menu) return NextResponse.json({ ok: false, message: "Menu item not found." }, { status: 400 });
-            subtotalCents += Math.round(menu.price * 100) * Number(item.quantity);
+            const optionAdder = (item.fishSoupOptionIds ?? [])
+                .reduce((sum, oid) => sum + (optionAdderById.get(oid) ?? 0), 0);
+            subtotalCents += Math.round((menu.price + optionAdder) * 100) * Number(item.quantity);
         }
 
         let promo = null;
@@ -221,16 +243,19 @@ export async function POST(req: NextRequest) {
                 if (!item.menuId || (item.quantity ?? 0) <= 0) return null;
                 const menu = menuById.get(item.menuId);
                 if (!menu) return null;
+                const optionAdder = (item.fishSoupOptionIds ?? [])
+                    .reduce((sum, oid) => sum + (optionAdderById.get(oid) ?? 0), 0);
                 return {
                     menu_id: item.menuId,
                     name: menu.name,
-                    price: menu.price,
+                    price: menu.price + optionAdder,
                     qty: Number(item.quantity),
                     special_request: normalizeRequest(item.specialRequest),
+                    config: item.fishSoupConfig ?? null,
                     categoryId: menu.categoryId,
                 };
             })
-            .filter(Boolean) as { menu_id: string; name: string; price: number; qty: number; special_request?: string; categoryId: string | null }[];
+            .filter(Boolean) as { menu_id: string; name: string; price: number; qty: number; special_request?: string; config: unknown | null; categoryId: string | null }[];
 
         const uniqueCategoryIds = [...new Set(orderItemsPayload.map(i => i.categoryId).filter(Boolean))] as string[];
 

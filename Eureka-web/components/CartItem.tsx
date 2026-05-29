@@ -1,7 +1,7 @@
 "use client";
 
 import EditCartItemModal from "@/components/EditCartItemModal";
-import { CATEGORY_ITEM_LIMIT, CATEGORY_ITEM_LIMIT_NAMES, SET_MEAL_UPGRADE_PRICE } from "@/lib/config";
+import { CATEGORY_ITEM_LIMIT, CATEGORY_ITEM_LIMIT_NAMES } from "@/lib/config";
 import { useCartStore } from "@/store/cart.store";
 import type { CartItemType } from "@/type";
 import { Minus, Pencil, Plus, Trash2 } from "lucide-react";
@@ -18,8 +18,23 @@ const CartItem = ({ item, isLocked }: { item: CartItemType; isLocked?: boolean }
   const isRestricted = !!item.categoryName && CATEGORY_ITEM_LIMIT_NAMES.includes(item.categoryName);
   const isIncreaseDisabled = isLocked || (isRestricted && restrictedQty >= CATEGORY_ITEM_LIMIT);
 
-  const unitPrice = item.price + (item.upgrade ? SET_MEAL_UPGRADE_PRICE : 0);
+  const fishSoupAdder = item.fishSoupConfig
+    ? item.fishSoupConfig.soupOption.priceAdder
+      + item.fishSoupConfig.baseOption.priceAdder
+      + item.fishSoupConfig.addOns.reduce((s, a) => s + a.priceAdder, 0)
+    : 0;
+  const unitPrice = item.price + (item.upgrade?.upgradePrice ?? 0) + fishSoupAdder;
   const upgradeDrinkName = item.upgrade?.drinkName;
+
+  const fishSoupLines = item.fishSoupConfig
+    ? [
+        `Soup: ${item.fishSoupConfig.soupOption.optionName}`,
+        `Base: ${item.fishSoupConfig.baseOption.optionName}`,
+        ...(item.fishSoupConfig.addOns.length > 0
+          ? [`Add-ons: ${item.fishSoupConfig.addOns.map((a) => a.optionName).join(", ")}`]
+          : []),
+      ]
+    : null;
 
   return (
     <div className="cart-item">
@@ -39,11 +54,14 @@ const CartItem = ({ item, isLocked }: { item: CartItemType; isLocked?: boolean }
           {upgradeDrinkName && (
             <p className="text-xs text-primary mt-0.5">+ {upgradeDrinkName}</p>
           )}
+          {fishSoupLines && fishSoupLines.map((line, i) => (
+            <p key={i} className="text-xs text-gray-400 mt-0.5 leading-snug">{line}</p>
+          ))}
           <p className="paragraph-bold text-primary mt-1">${unitPrice.toFixed(2)}</p>
 
           <div className="flex flex-row items-center gap-x-4 mt-2">
             <button
-              onClick={() => decreaseQty(item.id, item.specialRequest, upgradeDrinkName)}
+              onClick={() => decreaseQty(item.id, item.specialRequest, upgradeDrinkName, item.fishSoupConfig)}
               disabled={isLocked}
               className="cart-item__actions disabled:opacity-40 disabled:cursor-not-allowed"
             >
@@ -53,7 +71,7 @@ const CartItem = ({ item, isLocked }: { item: CartItemType; isLocked?: boolean }
             <span className="base-bold text-dark-100">{item.quantity}</span>
 
             <button
-              onClick={() => increaseQty(item.id, item.specialRequest, upgradeDrinkName)}
+              onClick={() => increaseQty(item.id, item.specialRequest, upgradeDrinkName, item.fishSoupConfig)}
               disabled={isIncreaseDisabled}
               className="cart-item__actions disabled:opacity-40 disabled:cursor-not-allowed"
             >
@@ -77,7 +95,7 @@ const CartItem = ({ item, isLocked }: { item: CartItemType; isLocked?: boolean }
           <Pencil size={16} className="text-gray-400 hover:text-primary transition-colors" />
         </button>
         <button
-          onClick={() => removeItem(item.id, item.specialRequest, upgradeDrinkName)}
+          onClick={() => removeItem(item.id, item.specialRequest, upgradeDrinkName, item.fishSoupConfig)}
           disabled={isLocked}
           className="flex-center p-1 disabled:opacity-40 disabled:cursor-not-allowed"
           aria-label="Remove item"

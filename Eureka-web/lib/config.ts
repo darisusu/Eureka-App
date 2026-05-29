@@ -5,9 +5,6 @@ import type { OrderStatus } from "@/type";
 /** Maximum number of past orders stored in localStorage and shown on the profile page. */
 export const RECENT_ORDERS_LIMIT = 5;
 
-/** Price added (in dollars) when a customer selects the set meal drink upgrade. */
-export const SET_MEAL_UPGRADE_PRICE = 1.50;
-
 /**
  * Name of the hidden menu item used to bill the set meal upgrade.
  * Must exist in the Supabase menu table with is_available = false:
@@ -23,7 +20,13 @@ export const SET_MEAL_UPGRADE_DRINKS_CATEGORY_NAME = "Drinks";
  * Category names that do NOT show the set meal upgrade prompt.
  * Must match the `name` column in the Supabase `categories` table exactly.
  */
-export const SET_MEAL_UPGRADE_EXCLUDED_CATEGORIES: string[] = ["Drinks"];
+export const SET_MEAL_UPGRADE_EXCLUDED_CATEGORIES: string[] = ["Drinks", "Zichar Add-ons"];
+
+/**
+ * Category names that do NOT show the special request text input.
+ * Must match the `name` column in the Supabase `categories` table exactly.
+ */
+export const SPECIAL_REQUEST_EXCLUDED_CATEGORIES: string[] = ["Drinks"];
 
 /** Maximum total quantity of items from restricted categories (Fish Soup, Zichar) per cart order. */
 export const CATEGORY_ITEM_LIMIT = 4;
@@ -31,6 +34,7 @@ export const CATEGORY_ITEM_LIMIT = 4;
 /**
  * Category names subject to the per-order item quantity limit.
  * Must match the `name` column in the Supabase `categories` table exactly.
+ * "Zichar Add-ons" is intentionally excluded — sides have no quantity cap.
  */
 export const CATEGORY_ITEM_LIMIT_NAMES: string[] = ["Fish Soup", "Zichar"];
 
@@ -109,15 +113,17 @@ export const STATUS_CONFIG: Record<OrderStatus, { label: string; textColor: stri
 // These mirror the table/function names defined in supabase-schema.sql.
 // If you rename a table or RPC in Supabase, update these constants AND the schema file.
 
-export const TABLE_USERS             = "users";
-export const TABLE_MENU              = "menu";
-export const TABLE_CATEGORIES        = "categories";
-export const TABLE_ORDERS            = "orders";
-export const TABLE_ORDER_ITEMS       = "order_items";
-export const TABLE_ORDER_DEPT_SLOTS  = "order_dept_slots";
-export const TABLE_PROMO_CODES       = "promo_codes";
-export const TABLE_PROMO_REDEMPTIONS = "promo_redemptions";
-export const TABLE_DEPT_CONFIG       = "dept_config";
+export const TABLE_USERS                = "users";
+export const TABLE_MENU                 = "menu";
+export const TABLE_CATEGORIES           = "categories";
+export const TABLE_ORDERS               = "orders";
+export const TABLE_ORDER_ITEMS          = "order_items";
+export const TABLE_ORDER_DEPT_SLOTS     = "order_dept_slots";
+export const TABLE_PROMO_CODES          = "promo_codes";
+export const TABLE_PROMO_REDEMPTIONS    = "promo_redemptions";
+export const TABLE_DEPT_CONFIG          = "dept_config";
+export const TABLE_MENU_OPTION_GROUPS   = "menu_option_groups";
+export const TABLE_MENU_OPTIONS         = "menu_options";
 
 /** Postgres function called via supabase.rpc() to compute the next available slot for a dept. */
 export const RPC_CALCULATE_DEPT_READY_AT = "calculate_dept_ready_at";

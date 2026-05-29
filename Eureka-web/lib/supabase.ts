@@ -5,7 +5,9 @@ import type {
     CheckoutConfirmResponse,
     CheckoutResponse,
     CreateUserParams,
+    FishSoupConfig,
     GetMenuParams,
+    MenuOptionGroup,
     OrderDetail,
     OrderHistoryEntry,
     PromoCode,
@@ -13,6 +15,7 @@ import type {
     OrderStatus,
     User,
 } from "@/type";
+import { resolveParentTiming } from "@/lib/time";
 import {
     DEFAULT_DEPT_MAX_WAIT_MINUTES,
     ORDER_NUMBER_PAD_LENGTH,
@@ -25,6 +28,8 @@ import {
     TABLE_CATEGORIES,
     TABLE_DEPT_CONFIG,
     TABLE_MENU,
+    TABLE_MENU_OPTION_GROUPS,
+    TABLE_MENU_OPTIONS,
     TABLE_ORDER_DEPT_SLOTS,
     TABLE_ORDER_ITEMS,
     TABLE_ORDERS,
@@ -94,11 +99,11 @@ export const getMenu = async ({ category, query }: GetMenuParams) => {
 export const getCategories = async () => {
     const { data, error } = await supabase
         .from(TABLE_CATEGORIES)
-        .select("id, name, description, has_queue, available_from, available_until")
+        .select("id, name, description, has_queue, available_from, available_until, parent_category_id")
         .order("sort_order")
         .order("name");
     if (error) throw new Error(error.message);
-    return data ?? [];
+    return resolveParentTiming(data ?? []);
 };
 
 export const calculateCartTotals = async ({
@@ -111,6 +116,21 @@ export const calculateCartTotals = async ({
     promoCode?: string | null;
 }): Promise<CartTotalsResponse> => {
     const expandedItems = items.flatMap(i => {
+        if (i.fishSoupConfig) {
+            const fishSoupEntry = {
+                menuId: i.id,
+                quantity: i.quantity,
+                fishSoupOptionIds: [
+                    i.fishSoupConfig.soupOption.optionId,
+                    i.fishSoupConfig.baseOption.optionId,
+                    ...i.fishSoupConfig.addOns.map(a => a.optionId),
+                ],
+            };
+            if (i.upgrade) {
+                return [fishSoupEntry, { menuId: i.upgrade.upgradeItemId, quantity: i.quantity }];
+            }
+            return [fishSoupEntry];
+        }
         const base = { menuId: i.id, quantity: i.quantity };
         if (i.upgrade) {
             return [base, { menuId: i.upgrade.upgradeItemId, quantity: i.quantity }];
@@ -120,15 +140,25 @@ export const calculateCartTotals = async ({
     const res = await fetch("/api/calculate-cart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            userId,
-            promoCode,
-            items: expandedItems,
-        }),
+        body: JSON.stringify({ userId, promoCode, items: expandedItems }),
     });
     const result = await res.json();
     if (!result.ok || !result.data) throw new Error(result.message ?? "Failed to calculate cart totals.");
     return result.data;
+};
+
+const buildFishSoupSummary = (cfg: FishSoupConfig, userRequest?: string): string => {
+    const lines = [
+        `Soup: ${cfg.soupOption.optionName}`,
+        `Base: ${cfg.baseOption.optionName}`,
+    ];
+    if (cfg.addOns.length > 0) {
+        lines.push(`Add-ons: ${cfg.addOns.map(a => a.optionName).join(", ")}`);
+    }
+    if (userRequest) {
+        lines.push(`Note: ${userRequest}`);
+    }
+    return lines.join("\n");
 };
 
 export const createCheckout = async ({
@@ -141,6 +171,23 @@ export const createCheckout = async ({
     promoCode?: string | null;
 }): Promise<CheckoutResponse> => {
     const checkoutItems = items.flatMap(i => {
+        if (i.fishSoupConfig) {
+            const fishSoupItem = {
+                menuId: i.id,
+                quantity: i.quantity,
+                specialRequest: buildFishSoupSummary(i.fishSoupConfig, i.specialRequest),
+                fishSoupOptionIds: [
+                    i.fishSoupConfig.soupOption.optionId,
+                    i.fishSoupConfig.baseOption.optionId,
+                    ...i.fishSoupConfig.addOns.map(a => a.optionId),
+                ],
+                fishSoupConfig: i.fishSoupConfig,
+            };
+            if (i.upgrade) {
+                return [fishSoupItem, { menuId: i.upgrade.upgradeItemId, quantity: i.quantity, specialRequest: i.upgrade.drinkName }];
+            }
+            return [fishSoupItem];
+        }
         const base = { menuId: i.id, quantity: i.quantity, specialRequest: i.specialRequest };
         if (i.upgrade) {
             return [base, { menuId: i.upgrade.upgradeItemId, quantity: i.quantity, specialRequest: i.upgrade.drinkName }];
@@ -150,12 +197,7 @@ export const createCheckout = async ({
     const res = await fetch("/api/create-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            action: "create",
-            userId,
-            promoCode,
-            items: checkoutItems,
-        }),
+        body: JSON.stringify({ action: "create", userId, promoCode, items: checkoutItems }),
     });
     const result = await res.json();
     if (!result.ok || !result.data) throw new Error(result.message ?? "Failed to create checkout.");
@@ -399,6 +441,31 @@ export const getDeptConfig = async (categoryIds: string[]): Promise<{ categoryId
     return data.map(r => ({ categoryId: r.category_id, maxWaitMinutes: r.max_wait_minutes ?? DEFAULT_DEPT_MAX_WAIT_MINUTES }));
 };
 
+export const getMenuOptionGroups = async (categoryId: string): Promise<MenuOptionGroup[]> => {
+    const { data: groups, error } = await supabase
+        .from(TABLE_MENU_OPTION_GROUPS)
+        .select("id, category_id, name, description, selection_type, is_required, sort_order")
+        .eq("category_id", categoryId)
+        .order("sort_order");
+    if (error || !groups?.length) return [];
+
+    const groupIds = groups.map((g) => g.id);
+    const { data: options, error: optErr } = await supabase
+        .from(TABLE_MENU_OPTIONS)
+        .select("id, group_id, name, price_adder, is_available, sort_order")
+        .in("group_id", groupIds)
+        .eq("is_available", true)
+        .order("sort_order");
+    if (optErr) return [];
+
+    return groups.map((g) => ({
+        ...g,
+        options: (options ?? [])
+            .filter((o) => o.group_id === g.id)
+            .map((o) => ({ ...o, price_adder: Number(o.price_adder) })),
+    }));
+};
+
 export const getDrinkMenuItems = async (): Promise<ReturnType<typeof getMenu>> => {
     const { data: category } = await supabase
         .from(TABLE_CATEGORIES)
@@ -409,14 +476,14 @@ export const getDrinkMenuItems = async (): Promise<ReturnType<typeof getMenu>> =
     return getMenu({ category: category.id, query: "" });
 };
 
-export const getSetMealUpgradeItem = async (): Promise<{ id: string } | null> => {
+export const getSetMealUpgradeItem = async (): Promise<{ id: string; price: number } | null> => {
     const { data, error } = await supabase
         .from(TABLE_MENU)
-        .select("id")
+        .select("id, price")
         .eq("name", SET_MEAL_UPGRADE_ITEM_NAME)
         .maybeSingle();
     if (error || !data) return null;
-    return data as { id: string };
+    return { id: data.id, price: Number(data.price) };
 };
 
 export const validatePromoCode = async ({

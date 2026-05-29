@@ -2,7 +2,7 @@
 
 import CartItem from "@/components/CartItem";
 import CustomButton from "@/components/CustomButton";
-import { CATEGORY_ITEM_LIMIT, CATEGORY_ITEM_LIMIT_NAMES, SET_MEAL_UPGRADE_PRICE } from "@/lib/config";
+import { CATEGORY_ITEM_LIMIT, CATEGORY_ITEM_LIMIT_NAMES } from "@/lib/config";
 import { calculateCartTotals, confirmCheckoutPayment, createCheckout, getCategories } from "@/lib/supabase";
 import { isCategoryAvailable } from "@/lib/time";
 import useAuthStore from "@/store/auth.store";
@@ -186,9 +186,9 @@ const CartFooter = ({
 
       <SectionCard className="bg-white">
         <h3 className="h3-bold text-dark-100 mb-4">Promo Code</h3>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <input
-            className="flex-1 rounded-full bg-slate-50 px-5 py-2.5 text-base outline-none border border-transparent focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 min-w-0 rounded-full bg-slate-50 px-5 py-2.5 text-base outline-none border border-transparent focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="Enter promo code here"
             value={promoCodeInput}
             onChange={(e) => setPromoCode(e.target.value)}
@@ -199,7 +199,7 @@ const CartFooter = ({
             onClick={onApplyPromo}
             disabled={!hasCode || isApplyingPromo || isLocked}
             className={cn(
-              "rounded-full px-6 py-3 text-white text-base font-semibold transition-opacity disabled:cursor-not-allowed",
+              "shrink-0 rounded-full px-5 py-2.5 text-white text-base font-semibold transition-opacity disabled:cursor-not-allowed",
               hasCode && !isLocked ? "bg-primary" : "bg-gray-300"
             )}
           >
@@ -363,13 +363,14 @@ export default function CartDrawer({
     }
   };
 
-  const localSubtotalCents = items.reduce(
-    (sum, item) =>
-      sum +
-      Math.round((item.price + (item.upgrade ? SET_MEAL_UPGRADE_PRICE : 0)) * 100) *
-        item.quantity,
-    0
-  );
+  const localSubtotalCents = items.reduce((sum, item) => {
+    const fishSoupAdder = item.fishSoupConfig
+      ? item.fishSoupConfig.soupOption.priceAdder
+        + item.fishSoupConfig.baseOption.priceAdder
+        + item.fishSoupConfig.addOns.reduce((s, a) => s + a.priceAdder, 0)
+      : 0;
+    return sum + Math.round((item.price + (item.upgrade?.upgradePrice ?? 0) + fishSoupAdder) * 100) * item.quantity;
+  }, 0);
   const subtotalCents = hasServerTotals ? pricing.subtotalCents : localSubtotalCents;
   const discountCents = hasServerTotals ? pricing.discountCents : 0;
   const promoCodeForUI = hasServerTotals ? appliedPromo?.codeUpper : null;
