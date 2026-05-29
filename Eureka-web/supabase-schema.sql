@@ -284,3 +284,129 @@ CREATE POLICY "public read" ON promo_codes FOR SELECT USING (true);
 -- Internal system table — no client access needed
 -- Trigger fires from service-role INSERT on orders, which bypasses RLS anyway
 ALTER TABLE daily_order_counter ENABLE ROW LEVEL SECURITY;
+
+-- ============================================
+-- MIGRATIONS
+-- ============================================
+
+-- 2026-05-29: Replace Zichar menu + add Zichar Add-ons category
+-- Cleared all order history (promo_redemptions, order_dept_slots, order_items, orders).
+-- Replaced old Zichar items with:
+--   Zichar — Chicken Rice Sets ($6.80): Salted Egg, Sweet & Sour, Gong Bao, Cereal
+--   Zichar — Fish Rice Sets ($7.80): Salted Egg, Sweet & Sour, Gong Bao, Cereal
+-- Created new category "Zichar Add-ons" (has_queue=false, sort_order=99):
+--   Fried You Mai Veg ($5), Fried Bean Sprout with Salted Fish ($5),
+--   Tomato Egg ($5), Scrambled Egg ($5), Sunny Side Egg ($1)
+-- Add-ons are excluded from the 4-item Zichar/Fish Soup cart limit.
+
+-- ============================================================
+-- 2026-05-29: Fish Soup configurator
+-- New tables for step-by-step item customisation (soup, base,
+-- add-ons). config JSONB column on order_items stores the
+-- customer's selections; special_request stores a human-readable
+-- summary for the staff dashboard.
+-- ============================================================
+
+-- 1. Run in Supabase SQL editor:
+
+CREATE TABLE menu_option_groups (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  category_id UUID NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  selection_type TEXT NOT NULL CHECK (selection_type IN ('single', 'multi')),
+  is_required BOOLEAN DEFAULT TRUE,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE menu_options (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  group_id UUID NOT NULL REFERENCES menu_option_groups(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  price_adder NUMERIC(10,2) NOT NULL DEFAULT 0,
+  is_available BOOLEAN DEFAULT TRUE,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS config JSONB;
+
+ALTER TABLE menu_option_groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE menu_options ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "public read" ON menu_option_groups FOR SELECT USING (true);
+CREATE POLICY "public read" ON menu_options FOR SELECT USING (true);
+
+-- 2. Seed Fish Soup proteins + option groups (run after step 1):
+
+DO $$
+DECLARE
+  v_cat UUID;
+  v_sg  UUID;
+  v_bg  UUID;
+  v_ag  UUID;
+BEGIN
+  SELECT id INTO v_cat FROM categories WHERE name = 'Fish Soup' LIMIT 1;
+  IF v_cat IS NULL THEN RAISE EXCEPTION 'Fish Soup category not found'; END IF;
+
+  -- Proteins (F1–F8)
+  INSERT INTO menu (name, price, category_id, is_available) VALUES
+    ('Mixed Fish',        6.80, v_cat, true),
+    ('White Fish',        6.30, v_cat, true),
+    ('Fried Fish',        5.80, v_cat, true),
+    ('Fish Head',         5.30, v_cat, true),
+    ('FooChow Fishball',  5.30, v_cat, true),
+    ('Prawn Ball',        6.80, v_cat, true),
+    ('Beef Shabu Shabu',  7.30, v_cat, true),
+    ('All In',            7.30, v_cat, true);
+
+  -- Step 2: Soup
+  INSERT INTO menu_option_groups (category_id, name, selection_type, is_required, sort_order)
+  VALUES (v_cat, 'Choose Soup', 'single', true, 1) RETURNING id INTO v_sg;
+  INSERT INTO menu_options (group_id, name, price_adder, sort_order) VALUES
+    (v_sg, 'Clear',      0.00, 1),
+    (v_sg, 'Milky',      0.00, 2),
+    (v_sg, 'Tomato',     0.80, 3),
+    (v_sg, 'Tom Yum',    1.00, 4),
+    (v_sg, 'Sauerkraut', 1.00, 5);
+
+  -- Step 3: Base (rice = free, noodle = +$0.80)
+  INSERT INTO menu_option_groups (category_id, name, selection_type, is_required, sort_order)
+  VALUES (v_cat, 'Choose Base', 'single', true, 2) RETURNING id INTO v_bg;
+  INSERT INTO menu_options (group_id, name, price_adder, sort_order) VALUES
+    (v_bg, 'White Rice',     0.00, 1),
+    (v_bg, 'Brown Rice',     0.00, 2),
+    (v_bg, 'Thick Bee Hoon', 0.80, 3),
+    (v_bg, 'Thin Bee Hoon',  0.80, 4),
+    (v_bg, 'Maggie Mee',     0.80, 5),
+    (v_bg, 'Mee Sua',        0.80, 6);
+
+  -- Add-ons
+  INSERT INTO menu_option_groups (category_id, name, selection_type, is_required, sort_order)
+  VALUES (v_cat, 'Add-ons', 'multi', false, 3) RETURNING id INTO v_ag;
+  INSERT INTO menu_options (group_id, name, price_adder, sort_order) VALUES
+    (v_ag, 'White Fish (2pc)',  2.00, 1),
+    (v_ag, 'Fried Fish (2pc)',  2.00, 2),
+    (v_ag, 'Prawn Ball (2pc)',  2.00, 3),
+    (v_ag, 'Fishball (2pc)',    1.50, 4),
+    (v_ag, 'Whole Egg',         0.30, 5),
+    (v_ag, 'Crispy Egg',        0.80, 6),
+    (v_ag, 'BeanCurd Skin',     0.60, 7),
+    (v_ag, 'Bitter Gourd',      0.60, 8),
+    (v_ag, 'Vegetable',         0.60, 9);
+END $$;
+
+-- ============================================================
+-- 2026-05-29: Zichar Add-ons inherits availability from Zichar
+-- Added parent_category_id FK on categories. When set, the
+-- category's availability window is resolved from the parent
+-- instead of its own available_from / available_until columns.
+-- ============================================================
+
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS parent_category_id UUID REFERENCES categories(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_category_id) WHERE parent_category_id IS NOT NULL;
+
+-- Link Zichar Add-ons to Zichar so they share the same availability window.
+UPDATE categories
+  SET parent_category_id = (SELECT id FROM categories WHERE name = 'Zichar' LIMIT 1)
+  WHERE name = 'Zichar Add-ons';
