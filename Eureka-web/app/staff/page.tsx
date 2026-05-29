@@ -340,33 +340,31 @@ export default function StaffScreen() {
                       .map((order) => (
                         <div
                           key={order.orderId}
-                          className={`border rounded-xl overflow-hidden flex min-h-[100px] ${isOverdue(order) ? "bg-orange-50 border-orange-300" : "bg-white border-gray-200"}`}
+                          className={`border rounded-xl relative min-h-[100px] flex-shrink-0 ${isOverdue(order) ? "bg-orange-50 border-orange-300" : "bg-white border-gray-200"}`}
                         >
-                          {/* Left: order info */}
-                          <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
-                            <div>
-                              <div className="flex items-baseline gap-2">
-                                <span className="text-4xl font-black tracking-tight text-gray-900 leading-none">
-                                  {order.orderNumber}
-                                </span>
-                                <span className="text-xs font-semibold text-gray-400 whitespace-nowrap">
-                                  {getTimeLabel(order)}
-                                </span>
-                              </div>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {order.userName}
-                                {order.userPhone ? ` (${order.userPhone})` : ""}
-                              </p>
-                              {(() => {
-                                const eta = getReadyAtLabel(order);
-                                return eta ? (
-                                  <p className="text-xs text-gray-400">
-                                    Est. ready by {eta.timeStr} · {eta.estMins}{" "}
-                                    min
-                                  </p>
-                                ) : null;
-                              })()}
+                          {/* Left: order info — drives card height */}
+                          <div className="pr-[44%] p-3 flex flex-col">
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-4xl font-black tracking-tight text-gray-900 leading-none">
+                                {order.orderNumber}
+                              </span>
+                              <span className="text-xs font-semibold text-gray-400 whitespace-nowrap">
+                                {getTimeLabel(order)}
+                              </span>
                             </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {order.userName}
+                              {order.userPhone ? ` (${order.userPhone})` : ""}
+                            </p>
+                            {(() => {
+                              const eta = getReadyAtLabel(order);
+                              return eta ? (
+                                <p className="text-xs text-gray-400">
+                                  Est. ready by {eta.timeStr} · {eta.estMins}{" "}
+                                  min
+                                </p>
+                              ) : null;
+                            })()}
                             <div className="flex flex-col gap-0.5 mt-2">
                               {order.items.length === 0 ? (
                                 <p className="text-xs text-gray-400">
@@ -378,20 +376,24 @@ export default function StaffScreen() {
                                     <p className="text-xs text-gray-700">
                                       {item.qty}x {item.name}
                                     </p>
-                                    {item.specialRequest && (
-                                      <p className="text-xs text-gray-400 pl-3">
-                                        ↳ {item.specialRequest}
-                                      </p>
-                                    )}
+                                    {item.specialRequest && item.specialRequest
+                                      .replace(/ · Base:/g, "\nBase:")
+                                      .replace(/ · Add-ons:/g, "\nAdd-ons:")
+                                      .split("\n")
+                                      .map((line, i) => (
+                                        <p key={i} className="text-xs text-gray-400 pl-3">
+                                          {i === 0 ? "↳ " : "   "}{line}
+                                        </p>
+                                      ))}
                                   </div>
                                 ))
                               )}
                             </div>
                           </div>
-                          {/* Right: full-height action button */}
+                          {/* Right: absolutely-positioned full-height action button */}
                           <button
                             onClick={() => handleOrderAction(order)}
-                            className={`w-[44%] flex-shrink-0 flex items-center justify-center text-sm font-bold text-white transition-opacity hover:opacity-80 ${
+                            className={`absolute right-0 top-0 bottom-0 w-[44%] flex items-center justify-center text-sm font-bold text-white transition-opacity hover:opacity-80 rounded-r-xl ${
                               column.key === "ready"
                                 ? "bg-green-800"
                                 : "bg-black"
