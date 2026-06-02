@@ -174,10 +174,11 @@ const MenuCard = ({
             <img
               src={image_url}
               alt={name}
-              className={`w-full h-36 rounded-2xl object-cover${!isAvailable ? " opacity-50" : ""}`}
+              loading="lazy"
+              className={`w-full aspect-square rounded-2xl object-cover${!isAvailable ? " opacity-50" : ""}`}
             />
           ) : (
-            <div className="w-full h-36 rounded-2xl bg-gray-100" />
+            <div className="w-full aspect-square rounded-2xl bg-gray-100" />
           )}
           {!isAvailable && availableWindow && (
             <div className="absolute bottom-0 left-0 right-0 bg-black/60 rounded-b-2xl px-3 py-1.5 flex items-center gap-1.5">
@@ -224,6 +225,7 @@ const MenuCard = ({
                 <img
                   src={image_url}
                   alt={name}
+                  loading="lazy"
                   className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
                 />
               ) : null}
