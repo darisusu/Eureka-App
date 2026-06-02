@@ -610,8 +610,8 @@ export default function CartDrawer({
             <div className="flex flex-col items-center justify-center pt-4 pb-0 gap-0">
               <Image src={fishSleep} alt="Empty cart" width={300} height={300} className="h-auto" />
               <h2 className="h3-bold text-dark-100">Your cart is empty</h2>
-              <p className="paragraph-regular text-gray-200 whitespace-nowrap">
-                Looks like you haven&apos;t added any food to your cart yet!
+              <p className="paragraph-regular text-gray-200 text-center">
+                Looks like you haven&apos;t added<br />any food to your cart yet!
               </p>
             </div>
           ) : (
