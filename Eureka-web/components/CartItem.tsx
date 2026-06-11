@@ -2,6 +2,7 @@
 
 import EditCartItemModal from "@/components/EditCartItemModal";
 import { CATEGORY_ITEM_LIMIT, CATEGORY_ITEM_LIMIT_NAMES } from "@/lib/config";
+import { baseSummary, fishSoupPriceAdder } from "@/lib/fishSoup";
 import { useCartStore } from "@/store/cart.store";
 import type { CartItemType } from "@/type";
 import { Minus, Pencil, Plus, Trash2 } from "lucide-react";
@@ -18,18 +19,13 @@ const CartItem = ({ item, isLocked }: { item: CartItemType; isLocked?: boolean }
   const isRestricted = !!item.categoryName && CATEGORY_ITEM_LIMIT_NAMES.includes(item.categoryName);
   const isIncreaseDisabled = isLocked || (isRestricted && restrictedQty >= CATEGORY_ITEM_LIMIT);
 
-  const fishSoupAdder = item.fishSoupConfig
-    ? item.fishSoupConfig.soupOption.priceAdder
-      + item.fishSoupConfig.baseOption.priceAdder
-      + item.fishSoupConfig.addOns.reduce((s, a) => s + a.priceAdder, 0)
-    : 0;
-  const unitPrice = item.price + (item.upgrade?.upgradePrice ?? 0) + fishSoupAdder;
+  const unitPrice = item.price + (item.upgrade?.upgradePrice ?? 0) + fishSoupPriceAdder(item.fishSoupConfig);
   const upgradeDrinkName = item.upgrade?.drinkName;
 
   const fishSoupLines = item.fishSoupConfig
     ? [
         `Soup: ${item.fishSoupConfig.soupOption.optionName}`,
-        `Base: ${item.fishSoupConfig.baseOption.optionName}`,
+        `Base: ${baseSummary(item.fishSoupConfig)}`,
         ...(item.fishSoupConfig.addOns.length > 0
           ? [`Add-ons: ${item.fishSoupConfig.addOns.map((a) => a.optionName).join(", ")}`]
           : []),

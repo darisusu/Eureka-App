@@ -1,4 +1,5 @@
 import { CATEGORY_ITEM_LIMIT, CATEGORY_ITEM_LIMIT_NAMES } from "@/lib/config";
+import { fishSoupPriceAdder, getBaseOptions } from "@/lib/fishSoup";
 import { CartStore, FishSoupConfig } from "@/type";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
@@ -12,7 +13,9 @@ const fishSoupKey = (config?: FishSoupConfig): string => {
     if (!config) return "";
     return [
         config.soupOption.optionId,
-        config.baseOption.optionId,
+        // Sorted so base order doesn't matter, but kept count-preserving so a
+        // double portion (same base twice) is distinct from a single portion.
+        ...getBaseOptions(config).map(b => b.optionId).sort(),
         ...config.addOns.map(a => a.optionId).sort(),
     ].join("|");
 };
@@ -28,13 +31,6 @@ const itemMatches = (
     normalizeRequest(i.specialRequest) === normalizeRequest(specialRequest) &&
     (i.upgrade?.drinkName ?? "") === (upgradeDrinkName ?? "") &&
     fishSoupKey(i.fishSoupConfig) === fishSoupKey(fishSoupConfig);
-
-const fishSoupPriceAdder = (config?: FishSoupConfig): number => {
-    if (!config) return 0;
-    return config.soupOption.priceAdder
-        + config.baseOption.priceAdder
-        + config.addOns.reduce((s, a) => s + a.priceAdder, 0);
-};
 
 export const useCartStore = create<CartStore>()(
     persist(

@@ -6,6 +6,15 @@ import type { OrderStatus } from "@/type";
 export const RECENT_ORDERS_LIMIT = 5;
 
 /**
+ * Whether to show the promo code entry section in the cart/checkout drawer.
+ * Set to false to hide the "Promo Code" input + Redeem button from customers.
+ * Hiding it does not remove the underlying promo logic — an already-applied
+ * discount still renders in the Payment Summary; customers just can't enter
+ * a new code. Flip back to true to re-enable instantly.
+ */
+export const SHOW_PROMO_CODE = true;
+
+/**
  * Name of the hidden menu item used to bill the set meal upgrade.
  * Must exist in the Supabase menu table with is_available = false:
  *   INSERT INTO menu (name, description, price, is_available)

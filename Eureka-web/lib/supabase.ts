@@ -15,6 +15,7 @@ import type {
     OrderStatus,
     User,
 } from "@/type";
+import { baseSummary, fishSoupOptionIds } from "@/lib/fishSoup";
 import { resolveParentTiming } from "@/lib/time";
 import {
     DEFAULT_DEPT_MAX_WAIT_MINUTES,
@@ -120,11 +121,7 @@ export const calculateCartTotals = async ({
             const fishSoupEntry = {
                 menuId: i.id,
                 quantity: i.quantity,
-                fishSoupOptionIds: [
-                    i.fishSoupConfig.soupOption.optionId,
-                    i.fishSoupConfig.baseOption.optionId,
-                    ...i.fishSoupConfig.addOns.map(a => a.optionId),
-                ],
+                fishSoupOptionIds: fishSoupOptionIds(i.fishSoupConfig),
             };
             if (i.upgrade) {
                 return [fishSoupEntry, { menuId: i.upgrade.upgradeItemId, quantity: i.quantity }];
@@ -150,7 +147,7 @@ export const calculateCartTotals = async ({
 const buildFishSoupSummary = (cfg: FishSoupConfig, userRequest?: string): string => {
     const lines = [
         `Soup: ${cfg.soupOption.optionName}`,
-        `Base: ${cfg.baseOption.optionName}`,
+        `Base: ${baseSummary(cfg)}`,
     ];
     if (cfg.addOns.length > 0) {
         lines.push(`Add-ons: ${cfg.addOns.map(a => a.optionName).join(", ")}`);
@@ -176,11 +173,7 @@ export const createCheckout = async ({
                 menuId: i.id,
                 quantity: i.quantity,
                 specialRequest: buildFishSoupSummary(i.fishSoupConfig, i.specialRequest),
-                fishSoupOptionIds: [
-                    i.fishSoupConfig.soupOption.optionId,
-                    i.fishSoupConfig.baseOption.optionId,
-                    ...i.fishSoupConfig.addOns.map(a => a.optionId),
-                ],
+                fishSoupOptionIds: fishSoupOptionIds(i.fishSoupConfig),
                 fishSoupConfig: i.fishSoupConfig,
             };
             if (i.upgrade) {

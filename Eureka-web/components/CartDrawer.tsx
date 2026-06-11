@@ -2,7 +2,8 @@
 
 import CartItem from "@/components/CartItem";
 import CustomButton from "@/components/CustomButton";
-import { CATEGORY_ITEM_LIMIT, CATEGORY_ITEM_LIMIT_NAMES } from "@/lib/config";
+import { CATEGORY_ITEM_LIMIT, CATEGORY_ITEM_LIMIT_NAMES, SHOW_PROMO_CODE } from "@/lib/config";
+import { fishSoupPriceAdder } from "@/lib/fishSoup";
 import { calculateCartTotals, confirmCheckoutPayment, createCheckout, getCategories } from "@/lib/supabase";
 import { isCategoryAvailable } from "@/lib/time";
 import useAuthStore from "@/store/auth.store";
@@ -184,32 +185,34 @@ const CartFooter = ({
     <div className="flex flex-col gap-5">
       <EstimatedTimeCard estimatedTime={estimatedTime} />
 
-      <SectionCard className="bg-white">
-        <h3 className="h3-bold text-dark-100 mb-4">Promo Code</h3>
-        <div className="flex items-center gap-2">
-          <input
-            className="flex-1 min-w-0 rounded-full bg-slate-50 px-5 py-2.5 text-base outline-none border border-transparent focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
-            placeholder="Enter promo code here"
-            value={promoCodeInput}
-            onChange={(e) => setPromoCode(e.target.value)}
-            autoComplete="off"
-            disabled={isLocked}
-          />
-          <button
-            onClick={onApplyPromo}
-            disabled={!hasCode || isApplyingPromo || isLocked}
-            className={cn(
-              "shrink-0 rounded-full px-5 py-2.5 text-white text-base font-semibold transition-opacity disabled:cursor-not-allowed",
-              hasCode && !isLocked ? "bg-primary" : "bg-gray-300"
-            )}
-          >
-            {isApplyingPromo ? "Checking..." : "Redeem"}
-          </button>
-        </div>
-        {promoCode && (
-          <p className="text-sm text-green-600 mt-3">Applied code: {promoCode}</p>
-        )}
-      </SectionCard>
+      {SHOW_PROMO_CODE && (
+        <SectionCard className="bg-white">
+          <h3 className="h3-bold text-dark-100 mb-4">Promo Code</h3>
+          <div className="flex items-center gap-2">
+            <input
+              className="flex-1 min-w-0 rounded-full bg-slate-50 px-5 py-2.5 text-base outline-none border border-transparent focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              placeholder="Enter promo code here"
+              value={promoCodeInput}
+              onChange={(e) => setPromoCode(e.target.value)}
+              autoComplete="off"
+              disabled={isLocked}
+            />
+            <button
+              onClick={onApplyPromo}
+              disabled={!hasCode || isApplyingPromo || isLocked}
+              className={cn(
+                "shrink-0 rounded-full px-5 py-2.5 text-white text-base font-semibold transition-opacity disabled:cursor-not-allowed",
+                hasCode && !isLocked ? "bg-primary" : "bg-gray-300"
+              )}
+            >
+              {isApplyingPromo ? "Checking..." : "Redeem"}
+            </button>
+          </div>
+          {promoCode && (
+            <p className="text-sm text-green-600 mt-3">Applied code: {promoCode}</p>
+          )}
+        </SectionCard>
+      )}
 
       <PaymentSummaryCard
         totalItems={totalItems}
@@ -364,11 +367,7 @@ export default function CartDrawer({
   };
 
   const localSubtotalCents = items.reduce((sum, item) => {
-    const fishSoupAdder = item.fishSoupConfig
-      ? item.fishSoupConfig.soupOption.priceAdder
-        + item.fishSoupConfig.baseOption.priceAdder
-        + item.fishSoupConfig.addOns.reduce((s, a) => s + a.priceAdder, 0)
-      : 0;
+    const fishSoupAdder = fishSoupPriceAdder(item.fishSoupConfig);
     return sum + Math.round((item.price + (item.upgrade?.upgradePrice ?? 0) + fishSoupAdder) * 100) * item.quantity;
   }, 0);
   const subtotalCents = hasServerTotals ? pricing.subtotalCents : localSubtotalCents;

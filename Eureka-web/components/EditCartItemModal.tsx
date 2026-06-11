@@ -6,6 +6,7 @@ import {
   SET_MEAL_UPGRADE_EXCLUDED_CATEGORIES,
   SPECIAL_REQUEST_EXCLUDED_CATEGORIES,
 } from "@/lib/config";
+import { baseSummary, fishSoupPriceAdder } from "@/lib/fishSoup";
 import { getDrinkMenuItems, getSetMealUpgradeItem } from "@/lib/supabase";
 import { useCartStore } from "@/store/cart.store";
 import type { CartItemType, MenuItem } from "@/type";
@@ -66,14 +67,9 @@ const EditCartItemModal = ({
   const upgradeAvailable = !loadingUpgrade && !!upgradeItem && drinkOptions.length > 0;
   const upgradePrice = upgradeItem?.price ?? (item.upgrade?.upgradePrice ?? 0);
   const selectedDrink = selectedDrinkId ? drinkOptions.find((d) => d.id === selectedDrinkId) : null;
-  const fishSoupAdder = item.fishSoupConfig
-    ? item.fishSoupConfig.soupOption.priceAdder
-      + item.fishSoupConfig.baseOption.priceAdder
-      + item.fishSoupConfig.addOns.reduce((s, a) => s + a.priceAdder, 0)
-    : 0;
   const effectiveUnitPrice = item.price
     + (selectedDrink && upgradeAvailable ? upgradePrice : 0)
-    + fishSoupAdder;
+    + fishSoupPriceAdder(item.fishSoupConfig);
 
   const handleSave = () => {
     const upgrade =
@@ -92,7 +88,7 @@ const EditCartItemModal = ({
   const fishSoupLines = item.fishSoupConfig
     ? [
         `Soup: ${item.fishSoupConfig.soupOption.optionName}`,
-        `Base: ${item.fishSoupConfig.baseOption.optionName}`,
+        `Base: ${baseSummary(item.fishSoupConfig)}`,
         ...(item.fishSoupConfig.addOns.length > 0
           ? [`Add-ons: ${item.fishSoupConfig.addOns.map((a) => a.optionName).join(", ")}`]
           : []),

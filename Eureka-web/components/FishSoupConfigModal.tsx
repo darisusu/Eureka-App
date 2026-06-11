@@ -30,7 +30,9 @@ const FishSoupConfigModal = ({
     const addOnGroup = optionGroups.find((g) => g.name === "Add-ons");
 
     const [selectedSoupId, setSelectedSoupId] = useState<string | null>(null);
-    const [selectedBaseId, setSelectedBaseId] = useState<string | null>(null);
+    const [selectedBase1Id, setSelectedBase1Id] = useState<string | null>(null);
+    // null = "None" (no second base — the second base is optional)
+    const [selectedBase2Id, setSelectedBase2Id] = useState<string | null>(null);
     const [selectedAddOnIds, setSelectedAddOnIds] = useState<Set<string>>(new Set());
     const [specialRequest, setSpecialRequest] = useState("");
     const [selectedDrinkId, setSelectedDrinkId] = useState<string | null | undefined>(undefined);
@@ -54,17 +56,19 @@ const FishSoupConfigModal = ({
     const upgradePrice = upgradeItem?.price ?? 0;
 
     const soupOption = soupGroup?.options.find((o) => o.id === selectedSoupId);
-    const baseOption = baseGroup?.options.find((o) => o.id === selectedBaseId);
+    const base1Option = baseGroup?.options.find((o) => o.id === selectedBase1Id);
+    const base2Option = selectedBase2Id ? baseGroup?.options.find((o) => o.id === selectedBase2Id) : undefined;
     const addOnOptions = addOnGroup?.options.filter((o) => selectedAddOnIds.has(o.id)) ?? [];
 
     const optionsAdder =
         (soupOption?.price_adder ?? 0) +
-        (baseOption?.price_adder ?? 0) +
+        (base1Option?.price_adder ?? 0) +
+        (base2Option?.price_adder ?? 0) +
         addOnOptions.reduce((s, a) => s + a.price_adder, 0);
     const upgradeAdder = selectedDrinkId && upgradeAvailable ? upgradePrice : 0;
     const totalPrice = item.price + optionsAdder + upgradeAdder;
 
-    const canAdd = !!selectedSoupId && !!selectedBaseId;
+    const canAdd = !!selectedSoupId && !!selectedBase1Id;
 
     const toggleAddOn = (id: string) => {
         setSelectedAddOnIds((prev) => {
@@ -76,7 +80,7 @@ const FishSoupConfigModal = ({
     };
 
     const handleAdd = () => {
-        if (!soupGroup || !baseGroup || !soupOption || !baseOption) return;
+        if (!soupGroup || !baseGroup || !soupOption || !base1Option) return;
 
         const toSelected = (group: MenuOptionGroup, opt: typeof soupOption): FishSoupSelectedOption => ({
             groupId: group.id,
@@ -86,9 +90,12 @@ const FishSoupConfigModal = ({
             priceAdder: opt.price_adder,
         });
 
+        const baseOptions = [toSelected(baseGroup, base1Option)];
+        if (base2Option) baseOptions.push(toSelected(baseGroup, base2Option));
+
         const config: FishSoupConfig = {
             soupOption: toSelected(soupGroup, soupOption),
-            baseOption: toSelected(baseGroup, baseOption),
+            baseOptions,
             addOns: addOnGroup
                 ? (addOnGroup.options
                     .filter((o) => selectedAddOnIds.has(o.id))
@@ -108,6 +115,76 @@ const FishSoupConfigModal = ({
     const riceOptions = baseGroup?.options.filter((o) => o.price_adder === 0) ?? [];
     const noodleOptions = baseGroup?.options.filter((o) => o.price_adder > 0) ?? [];
     const noodleAdder = noodleOptions[0]?.price_adder ?? 0.8;
+
+    const renderBaseChoices = (
+        radioName: string,
+        selectedId: string | null,
+        onSelect: (id: string | null) => void,
+        includeNone: boolean,
+    ) => (
+        <>
+            {riceOptions.length > 0 && (
+                <>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Rice — Free</p>
+                    <div className="flex flex-col mb-3">
+                        {riceOptions.map((opt) => (
+                            <label
+                                key={opt.id}
+                                className="flex items-center gap-3 py-2.5 border-b border-gray-100 cursor-pointer last:border-0"
+                            >
+                                <input
+                                    type="radio"
+                                    name={radioName}
+                                    checked={selectedId === opt.id}
+                                    onChange={() => onSelect(opt.id)}
+                                    className="accent-primary w-4 h-4 flex-shrink-0"
+                                />
+                                <span className="body-regular text-dark-100">{opt.name}</span>
+                            </label>
+                        ))}
+                    </div>
+                </>
+            )}
+
+            {noodleOptions.length > 0 && (
+                <>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                        Noodle — +${noodleAdder.toFixed(2)}
+                    </p>
+                    <div className="flex flex-col">
+                        {noodleOptions.map((opt) => (
+                            <label
+                                key={opt.id}
+                                className="flex items-center gap-3 py-2.5 border-b border-gray-100 cursor-pointer last:border-0"
+                            >
+                                <input
+                                    type="radio"
+                                    name={radioName}
+                                    checked={selectedId === opt.id}
+                                    onChange={() => onSelect(opt.id)}
+                                    className="accent-primary w-4 h-4 flex-shrink-0"
+                                />
+                                <span className="body-regular text-dark-100">{opt.name}</span>
+                            </label>
+                        ))}
+                    </div>
+                </>
+            )}
+
+            {includeNone && (
+                <label className="flex items-center gap-3 py-2.5 mt-1 cursor-pointer">
+                    <input
+                        type="radio"
+                        name={radioName}
+                        checked={selectedId === null}
+                        onChange={() => onSelect(null)}
+                        className="accent-primary w-4 h-4 flex-shrink-0"
+                    />
+                    <span className="body-regular text-gray-400">None</span>
+                </label>
+            )}
+        </>
+    );
 
     return (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
@@ -168,64 +245,28 @@ const FishSoupConfigModal = ({
                         </div>
                     )}
 
-                    {/* Base */}
+                    {/* Base 1 (required) */}
                     {baseGroup && (
                         <div>
                             <div className="flex items-center justify-between mb-3">
                                 <p className="paragraph-bold text-dark-100">
-                                    {baseGroup.name}
+                                    Choose Base 1
                                     <span className="text-red-500 ml-1">*</span>
                                 </p>
                                 <p className="text-xs text-gray-400">Required</p>
                             </div>
+                            {renderBaseChoices(`base1-${item.id}`, selectedBase1Id, setSelectedBase1Id, false)}
+                        </div>
+                    )}
 
-                            {riceOptions.length > 0 && (
-                                <>
-                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Rice — Free</p>
-                                    <div className="flex flex-col mb-3">
-                                        {riceOptions.map((opt) => (
-                                            <label
-                                                key={opt.id}
-                                                className="flex items-center gap-3 py-2.5 border-b border-gray-100 cursor-pointer last:border-0"
-                                            >
-                                                <input
-                                                    type="radio"
-                                                    name={`base-${item.id}`}
-                                                    checked={selectedBaseId === opt.id}
-                                                    onChange={() => setSelectedBaseId(opt.id)}
-                                                    className="accent-primary w-4 h-4 flex-shrink-0"
-                                                />
-                                                <span className="body-regular text-dark-100">{opt.name}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </>
-                            )}
-
-                            {noodleOptions.length > 0 && (
-                                <>
-                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                                        Noodle — +${noodleAdder.toFixed(2)}
-                                    </p>
-                                    <div className="flex flex-col">
-                                        {noodleOptions.map((opt) => (
-                                            <label
-                                                key={opt.id}
-                                                className="flex items-center gap-3 py-2.5 border-b border-gray-100 cursor-pointer last:border-0"
-                                            >
-                                                <input
-                                                    type="radio"
-                                                    name={`base-${item.id}`}
-                                                    checked={selectedBaseId === opt.id}
-                                                    onChange={() => setSelectedBaseId(opt.id)}
-                                                    className="accent-primary w-4 h-4 flex-shrink-0"
-                                                />
-                                                <span className="body-regular text-dark-100">{opt.name}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </>
-                            )}
+                    {/* Base 2 (optional — same option allowed for a double portion) */}
+                    {baseGroup && (
+                        <div>
+                            <div className="flex items-center justify-between mb-3">
+                                <p className="paragraph-bold text-dark-100">Add a 2nd Base</p>
+                                <p className="text-xs text-gray-400">Optional</p>
+                            </div>
+                            {renderBaseChoices(`base2-${item.id}`, selectedBase2Id, setSelectedBase2Id, true)}
                         </div>
                     )}
 
