@@ -156,7 +156,7 @@ export interface FishSoupSelectedOption {
 }
 
 export interface FishSoupConfig {
-    soupOption: FishSoupSelectedOption;
+    soupOption?: FishSoupSelectedOption;
     /**
      * One or two base selections. A second entry is optional; the same option
      * may appear twice to represent a double portion of that base. (Older carts

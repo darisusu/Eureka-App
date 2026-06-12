@@ -12,7 +12,7 @@ const normalizeRequest = (request?: string) => {
 const fishSoupKey = (config?: FishSoupConfig): string => {
     if (!config) return "";
     return [
-        config.soupOption.optionId,
+        config.soupOption?.optionId ?? "",
         // Sorted so base order doesn't matter, but kept count-preserving so a
         // double portion (same base twice) is distinct from a single portion.
         ...getBaseOptions(config).map(b => b.optionId).sort(),

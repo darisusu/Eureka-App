@@ -105,7 +105,7 @@ Schema source: `Eureka-web/supabase-schema.sql`
 | `users` | `id` (uuid pk), `name`, `phone` (unique), `role` ("customer"\|"staff"), `pin_hash`, `created_at` |
 | `categories` | `id`, `name`, `description`, `has_queue`, `available_from`, `available_until`, `parent_category_id` (nullable fk → self) | Active: Fish Soup, Zichar (4-item cart limit), Zichar Add-ons (has_queue=false, no cart limit, inherits availability from Zichar via `parent_category_id`), Drinks, Porridge |
 | `dept_config` | `id`, `category_id` (fk), `base_prep_minutes`, `gap_minutes`, `max_wait_minutes` |
-| `menu` | `id`, `name`, `description`, `image_url`, `price` (numeric dollars), `category_id` (fk), `is_available` |
+| `menu` | `id`, `name`, `description`, `image_url`, `price` (numeric dollars), `category_id` (fk), `is_available`, `sort_order` (int, default 0) |
 | `menu_option_groups` | `id`, `category_id` (fk), `name`, `selection_type` ("single"\|"multi"), `is_required`, `sort_order` — groups like "Choose Soup", "Choose Base", "Add-ons" |
 | `menu_options` | `id`, `group_id` (fk), `name`, `price_adder` (numeric dollars), `is_available`, `sort_order` — individual choices within a group |
 | `orders` | `id`, `user_id` (fk), `total` (numeric dollars), `order_number` (int, resets daily at 4am SGT via `daily_order_counter`), `is_paid`, `status`, `ready_at`, `updated_at`, `promo_id`, `promo_code`, `discount_cents`, `payment_intent_id`, `created_at` |
@@ -118,6 +118,10 @@ Schema source: `Eureka-web/supabase-schema.sql`
 **Order status flow:** `pending_payment` → `received` → `ready` → `collected` (also `cancelled` — set manually via Supabase console only, no customer-facing cancel UI). The `"paid"` and `"preparing"` values still exist in the `OrderStatus` TypeScript type and DB schema for backward compatibility but are not emitted by the current flow.
 
 **`orders.updated_at`** is present in the schema with an auto-update trigger (`trg_orders_updated_at`). If the column is missing from an existing DB, run: `ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();`
+
+**`menu.sort_order`** controls display order within a category. `getMenu` orders by this column ascending (NULLs last). If the column is missing from an existing DB, run: `ALTER TABLE menu ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;` then set values per item. Fish Soup display order: 1 Mixed Fish, 2 White Fish, 3 Fried Fish, 4 Fuzhou Fishball, 5 Prawn Ball, 6 All In, 7 Beef Shabu Shabu. Fish Head is marked `is_available = false`.
+
+**Menu items can never be hard-deleted** if they are referenced by `order_items.menu_id`. Always soft-delete via `is_available = false` to preserve order history. The FK constraint `order_items_menu_id_fkey` will block any `DELETE` on a referenced row.
 
 ---
 
@@ -148,6 +152,16 @@ STRIPE_CURRENCY
 
 - Delivery, dine-in table management, in-store POS, inventory management (explicit non-goals for MVP)
 - `orders.ready_at` is populated from `order_dept_slots` but not surfaced separately to the customer beyond the ETA label
+- **WhatsApp messaging** — upon successful registration, send a welcome message via WhatsApp to the new user's phone number:
+  ```
+  Hi [NAME]!
+
+  Welcome to EurekaGO 👋
+  Order ahead, pay immediately, collection on time.
+
+  Enjoy 20% off your first order with code [PROMO_CODE]
+  ```
+  The promo code should be generated and assigned per user at registration time. Implementation will use a WhatsApp Business API provider (e.g. Twilio or Meta Cloud API) called from the `POST /api/register` route (or equivalent sign-up handler).
 
 ## Vestigial / Unused Files (web)
 

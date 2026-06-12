@@ -38,7 +38,7 @@ function SearchInner() {
         <div className="max-w-5xl mx-auto pt-2.5 pb-2 px-5">
           <SearchBar />
         </div>
-        <Filter categories={categories} />
+        <Filter categories={categories.filter((c) => menu.some((m) => m.category_id === c.id))} />
       </div>
 
       <div className="min-h-screen">
@@ -57,6 +57,7 @@ function SearchInner() {
                 category: cat,
                 items: menu.filter((item) => item.category_id === cat.id),
               }))
+              .filter((group) => group.items.length > 0)
               .map((group) => {
                 const available = isCategoryAvailable(
                   group.category.available_from,

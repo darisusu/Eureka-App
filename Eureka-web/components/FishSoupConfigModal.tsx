@@ -74,8 +74,8 @@ const FishSoupConfigModal = ({
     const upgradeAdder = selectedDrinkId && upgradeAvailable ? upgradePrice : 0;
     const totalPrice = item.price + optionsAdder + upgradeAdder;
 
-    // Base is optional now — only the soup is required.
-    const canAdd = !!selectedSoupId;
+    // Soup is only required when a soup group exists (Fish Soup); for add-ons-only items (Zichar) always enabled.
+    const canAdd = soupGroup ? !!selectedSoupId : true;
 
     const incBase = (id: string) =>
         setBaseQty((prev) => {
@@ -103,9 +103,9 @@ const FishSoupConfigModal = ({
     };
 
     const handleAdd = () => {
-        if (!soupGroup || !baseGroup || !soupOption) return;
+        if (soupGroup && !soupOption) return;
 
-        const toSelected = (group: MenuOptionGroup, opt: typeof soupOption): FishSoupSelectedOption => ({
+        const toSelected = (group: MenuOptionGroup, opt: MenuOption): FishSoupSelectedOption => ({
             groupId: group.id,
             groupName: group.name,
             optionId: opt.id,
@@ -116,13 +116,15 @@ const FishSoupConfigModal = ({
         // Expand the quantity map into one entry per portion (e.g. a double
         // portion of the same base produces two identical entries).
         const baseOptions: FishSoupSelectedOption[] = [];
-        for (const opt of baseGroup.options) {
-            const q = baseQty[opt.id] ?? 0;
-            for (let k = 0; k < q; k++) baseOptions.push(toSelected(baseGroup, opt));
+        if (baseGroup) {
+            for (const opt of baseGroup.options) {
+                const q = baseQty[opt.id] ?? 0;
+                for (let k = 0; k < q; k++) baseOptions.push(toSelected(baseGroup, opt));
+            }
         }
 
         const config: FishSoupConfig = {
-            soupOption: toSelected(soupGroup, soupOption),
+            ...(soupGroup && soupOption ? { soupOption: toSelected(soupGroup, soupOption) } : {}),
             baseOptions,
             addOns: addOnGroup
                 ? (addOnGroup.options

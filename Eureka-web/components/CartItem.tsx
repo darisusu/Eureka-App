@@ -25,7 +25,7 @@ const CartItem = ({ item, isLocked }: { item: CartItemType; isLocked?: boolean }
   const fishSoupBase = item.fishSoupConfig ? baseSummary(item.fishSoupConfig) : "";
   const fishSoupLines = item.fishSoupConfig
     ? [
-        `Soup: ${item.fishSoupConfig.soupOption.optionName}`,
+        ...(item.fishSoupConfig.soupOption ? [`Soup: ${item.fishSoupConfig.soupOption.optionName}`] : []),
         ...(fishSoupBase ? [`Base: ${fishSoupBase}`] : []),
         ...(item.fishSoupConfig.addOns.length > 0
           ? [`Add-ons: ${item.fishSoupConfig.addOns.map((a) => a.optionName).join(", ")}`]

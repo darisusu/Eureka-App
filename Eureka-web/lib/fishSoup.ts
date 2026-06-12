@@ -13,7 +13,7 @@ export const getBaseOptions = (config: FishSoupConfig): FishSoupSelectedOption[]
 /** Total price adder ($) contributed by soup + all bases + add-ons. */
 export const fishSoupPriceAdder = (config?: FishSoupConfig): number => {
     if (!config) return 0;
-    return config.soupOption.priceAdder
+    return (config.soupOption?.priceAdder ?? 0)
         + getBaseOptions(config).reduce((s, b) => s + b.priceAdder, 0)
         + config.addOns.reduce((s, a) => s + a.priceAdder, 0);
 };
@@ -35,7 +35,7 @@ export const baseSummary = (config: FishSoupConfig): string => {
  * de-duplicated) so a double portion is charged for both base adders.
  */
 export const fishSoupOptionIds = (config: FishSoupConfig): string[] => [
-    config.soupOption.optionId,
+    ...(config.soupOption ? [config.soupOption.optionId] : []),
     ...getBaseOptions(config).map(b => b.optionId),
     ...config.addOns.map(a => a.optionId),
 ];

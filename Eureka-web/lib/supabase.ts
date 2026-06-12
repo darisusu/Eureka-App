@@ -92,7 +92,7 @@ export const getMenu = async ({ category, query }: GetMenuParams) => {
             q = q.ilike("name", `%${query}%`);
         }
     }
-    const { data, error } = await q;
+    const { data, error } = await q.order("sort_order", { ascending: true, nullsFirst: false });
     if (error) throw new Error(error.message);
     return data ?? [];
 };
@@ -145,7 +145,8 @@ export const calculateCartTotals = async ({
 };
 
 const buildFishSoupSummary = (cfg: FishSoupConfig, userRequest?: string): string => {
-    const lines = [`Soup: ${cfg.soupOption.optionName}`];
+    const lines: string[] = [];
+    if (cfg.soupOption) lines.push(`Soup: ${cfg.soupOption.optionName}`);
     const base = baseSummary(cfg);
     if (base) lines.push(`Base: ${base}`);
     if (cfg.addOns.length > 0) {

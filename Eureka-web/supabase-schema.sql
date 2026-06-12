@@ -47,6 +47,7 @@ CREATE TABLE menu (
   price NUMERIC(10,2) NOT NULL,
   category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
   is_available BOOLEAN DEFAULT TRUE,
+  sort_order INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -410,3 +411,75 @@ CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_category_i
 UPDATE categories
   SET parent_category_id = (SELECT id FROM categories WHERE name = 'Zichar' LIMIT 1)
   WHERE name = 'Zichar Add-ons';
+
+-- ============================================================
+-- 2026-06-13: Zichar menu rebuild + inline add-ons
+-- Replaced all Zichar menu items with 3 items; add-ons (Sunny
+-- Side Egg) moved from Zichar Add-ons category into a
+-- menu_option_group on the Zichar category so they appear
+-- inline in the item modal. Zichar Add-ons category stays empty.
+-- FishSoupConfig.soupOption is now optional so the same modal
+-- path handles add-ons-only items.
+-- NOTE: Old Zichar items must be soft-deleted (is_available=false),
+-- not hard-deleted — order_items.menu_id FK prevents deletion of
+-- any menu row referenced by order history.
+-- ============================================================
+
+-- 1. Add sort_order to menu (idempotent)
+ALTER TABLE menu ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;
+
+-- 2. Soft-delete old Zichar items (preserves order history)
+UPDATE menu
+  SET is_available = false
+  WHERE category_id = (SELECT id FROM categories WHERE name = 'Zichar' LIMIT 1);
+
+-- 2b. Soft-delete all Zichar Add-ons items (add-ons now inline via menu_option_groups)
+UPDATE menu
+  SET is_available = false
+  WHERE category_id = (SELECT id FROM categories WHERE name = 'Zichar Add-ons' LIMIT 1);
+
+-- 3. Insert new Zichar items
+INSERT INTO menu (name, price, category_id, is_available, sort_order)
+SELECT
+  item.name,
+  item.price,
+  (SELECT id FROM categories WHERE name = 'Zichar' LIMIT 1),
+  true,
+  item.sort_order
+FROM (VALUES
+  ('Salted Egg Chicken with White Rice', 7.80, 1),
+  ('Fried Chicken with White Rice',      6.80, 2),
+  ('Fried Chicken with Egg Fried Rice',  7.80, 3)
+) AS item(name, price, sort_order);
+
+-- 4. Add "Add-ons" option group to Zichar category
+INSERT INTO menu_option_groups (category_id, name, selection_type, is_required, sort_order)
+SELECT
+  (SELECT id FROM categories WHERE name = 'Zichar' LIMIT 1),
+  'Add-ons',
+  'multi',
+  false,
+  10;
+
+-- 5. Add "Sunny Side Egg" option to that group
+INSERT INTO menu_options (group_id, name, price_adder, is_available, sort_order)
+SELECT
+  (SELECT id FROM menu_option_groups
+    WHERE category_id = (SELECT id FROM categories WHERE name = 'Zichar' LIMIT 1)
+    AND name = 'Add-ons' LIMIT 1),
+  'Sunny Side Egg',
+  1.00,
+  true,
+  1;
+
+-- 6. Set Fish Soup item sort order
+UPDATE menu SET sort_order = 1 WHERE name ILIKE '%mixed fish%';
+UPDATE menu SET sort_order = 2 WHERE name ILIKE '%white fish%';
+UPDATE menu SET sort_order = 3 WHERE name ILIKE '%fried fish%';
+UPDATE menu SET sort_order = 4 WHERE name ILIKE '%fuzhou fishball%';
+UPDATE menu SET sort_order = 5 WHERE name ILIKE '%prawn ball%';
+UPDATE menu SET sort_order = 6 WHERE name ILIKE '%all in%';
+UPDATE menu SET sort_order = 7 WHERE name ILIKE '%beef shabu%';
+
+-- 7. Hide fish head
+UPDATE menu SET is_available = false WHERE name ILIKE '%fish head%';
