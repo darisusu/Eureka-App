@@ -26,7 +26,7 @@ function SearchInner() {
     // Fetch the full menu once to know which categories have items, independent
     // of any active category filter — so the tab bar never collapses.
     getMenu({})
-      .then((data) => setPopulatedCategoryIds(new Set((data as MenuItem[]).map((m) => m.category_id))))
+      .then((data) => setPopulatedCategoryIds(new Set((data as MenuItem[]).map((m) => m.category_id).filter((id): id is string => id !== null))))
       .catch(() => null);
   }, []);
 
