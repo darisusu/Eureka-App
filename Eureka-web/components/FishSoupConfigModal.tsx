@@ -1,9 +1,12 @@
 "use client";
 
 import { getDrinkMenuItems, getSetMealUpgradeItem } from "@/lib/supabase";
-import type { CartItemUpgrade, FishSoupConfig, FishSoupSelectedOption, MenuItem, MenuOptionGroup } from "@/type";
-import { X } from "lucide-react";
+import type { CartItemUpgrade, FishSoupConfig, FishSoupSelectedOption, MenuItem, MenuOption, MenuOptionGroup } from "@/type";
+import { Minus, Plus, X } from "lucide-react";
 import { useEffect, useState } from "react";
+
+/** Max base portions a customer may select (e.g. a double portion of one base). */
+const MAX_BASE = 2;
 
 interface FishSoupConfigModalProps {
     item: MenuItem;
@@ -30,9 +33,9 @@ const FishSoupConfigModal = ({
     const addOnGroup = optionGroups.find((g) => g.name === "Add-ons");
 
     const [selectedSoupId, setSelectedSoupId] = useState<string | null>(null);
-    const [selectedBase1Id, setSelectedBase1Id] = useState<string | null>(null);
-    // null = "None" (no second base — the second base is optional)
-    const [selectedBase2Id, setSelectedBase2Id] = useState<string | null>(null);
+    // Quantity per base option (0–MAX_BASE total). The base is optional, and the
+    // same base may be picked twice for a double portion.
+    const [baseQty, setBaseQty] = useState<Record<string, number>>({});
     const [selectedAddOnIds, setSelectedAddOnIds] = useState<Set<string>>(new Set());
     const [specialRequest, setSpecialRequest] = useState("");
     const [selectedDrinkId, setSelectedDrinkId] = useState<string | null | undefined>(undefined);
@@ -56,19 +59,39 @@ const FishSoupConfigModal = ({
     const upgradePrice = upgradeItem?.price ?? 0;
 
     const soupOption = soupGroup?.options.find((o) => o.id === selectedSoupId);
-    const base1Option = baseGroup?.options.find((o) => o.id === selectedBase1Id);
-    const base2Option = selectedBase2Id ? baseGroup?.options.find((o) => o.id === selectedBase2Id) : undefined;
     const addOnOptions = addOnGroup?.options.filter((o) => selectedAddOnIds.has(o.id)) ?? [];
+
+    const baseTotal = Object.values(baseQty).reduce((s, n) => s + n, 0);
+    const baseAdder = (baseGroup?.options ?? []).reduce(
+        (s, o) => s + (baseQty[o.id] ?? 0) * o.price_adder,
+        0,
+    );
 
     const optionsAdder =
         (soupOption?.price_adder ?? 0) +
-        (base1Option?.price_adder ?? 0) +
-        (base2Option?.price_adder ?? 0) +
+        baseAdder +
         addOnOptions.reduce((s, a) => s + a.price_adder, 0);
     const upgradeAdder = selectedDrinkId && upgradeAvailable ? upgradePrice : 0;
     const totalPrice = item.price + optionsAdder + upgradeAdder;
 
-    const canAdd = !!selectedSoupId && !!selectedBase1Id;
+    // Base is optional now — only the soup is required.
+    const canAdd = !!selectedSoupId;
+
+    const incBase = (id: string) =>
+        setBaseQty((prev) => {
+            const total = Object.values(prev).reduce((s, n) => s + n, 0);
+            if (total >= MAX_BASE) return prev;
+            return { ...prev, [id]: (prev[id] ?? 0) + 1 };
+        });
+
+    const decBase = (id: string) =>
+        setBaseQty((prev) => {
+            const next = { ...prev };
+            const q = (next[id] ?? 0) - 1;
+            if (q <= 0) delete next[id];
+            else next[id] = q;
+            return next;
+        });
 
     const toggleAddOn = (id: string) => {
         setSelectedAddOnIds((prev) => {
@@ -80,7 +103,7 @@ const FishSoupConfigModal = ({
     };
 
     const handleAdd = () => {
-        if (!soupGroup || !baseGroup || !soupOption || !base1Option) return;
+        if (!soupGroup || !baseGroup || !soupOption) return;
 
         const toSelected = (group: MenuOptionGroup, opt: typeof soupOption): FishSoupSelectedOption => ({
             groupId: group.id,
@@ -90,8 +113,13 @@ const FishSoupConfigModal = ({
             priceAdder: opt.price_adder,
         });
 
-        const baseOptions = [toSelected(baseGroup, base1Option)];
-        if (base2Option) baseOptions.push(toSelected(baseGroup, base2Option));
+        // Expand the quantity map into one entry per portion (e.g. a double
+        // portion of the same base produces two identical entries).
+        const baseOptions: FishSoupSelectedOption[] = [];
+        for (const opt of baseGroup.options) {
+            const q = baseQty[opt.id] ?? 0;
+            for (let k = 0; k < q; k++) baseOptions.push(toSelected(baseGroup, opt));
+        }
 
         const config: FishSoupConfig = {
             soupOption: toSelected(soupGroup, soupOption),
@@ -116,75 +144,43 @@ const FishSoupConfigModal = ({
     const noodleOptions = baseGroup?.options.filter((o) => o.price_adder > 0) ?? [];
     const noodleAdder = noodleOptions[0]?.price_adder ?? 0.8;
 
-    const renderBaseChoices = (
-        radioName: string,
-        selectedId: string | null,
-        onSelect: (id: string | null) => void,
-        includeNone: boolean,
-    ) => (
-        <>
-            {riceOptions.length > 0 && (
-                <>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Rice — Free</p>
-                    <div className="flex flex-col mb-3">
-                        {riceOptions.map((opt) => (
-                            <label
-                                key={opt.id}
-                                className="flex items-center gap-3 py-2.5 border-b border-gray-100 cursor-pointer last:border-0"
-                            >
-                                <input
-                                    type="radio"
-                                    name={radioName}
-                                    checked={selectedId === opt.id}
-                                    onChange={() => onSelect(opt.id)}
-                                    className="accent-primary w-4 h-4 flex-shrink-0"
-                                />
-                                <span className="body-regular text-dark-100">{opt.name}</span>
-                            </label>
-                        ))}
+    const renderBaseRow = (opt: MenuOption) => {
+        const qty = baseQty[opt.id] ?? 0;
+        return (
+            <div
+                key={opt.id}
+                className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0"
+            >
+                <span className="body-regular text-dark-100">{opt.name}</span>
+                <div className="flex items-center gap-4">
+                    <span className={`text-sm font-medium ${opt.price_adder === 0 ? "text-green-600" : "text-dark-100"}`}>
+                        {priceLabel(opt.price_adder)}
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => decBase(opt.id)}
+                            disabled={qty === 0}
+                            aria-label={`Remove ${opt.name}`}
+                            className="cart-item__actions disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                            <Minus size={10} color="#FF9C01" />
+                        </button>
+                        <span className="base-bold text-dark-100 w-4 text-center">{qty}</span>
+                        <button
+                            type="button"
+                            onClick={() => incBase(opt.id)}
+                            disabled={baseTotal >= MAX_BASE}
+                            aria-label={`Add ${opt.name}`}
+                            className="cart-item__actions disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                            <Plus size={10} color="#FF9C01" />
+                        </button>
                     </div>
-                </>
-            )}
-
-            {noodleOptions.length > 0 && (
-                <>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                        Noodle — +${noodleAdder.toFixed(2)}
-                    </p>
-                    <div className="flex flex-col">
-                        {noodleOptions.map((opt) => (
-                            <label
-                                key={opt.id}
-                                className="flex items-center gap-3 py-2.5 border-b border-gray-100 cursor-pointer last:border-0"
-                            >
-                                <input
-                                    type="radio"
-                                    name={radioName}
-                                    checked={selectedId === opt.id}
-                                    onChange={() => onSelect(opt.id)}
-                                    className="accent-primary w-4 h-4 flex-shrink-0"
-                                />
-                                <span className="body-regular text-dark-100">{opt.name}</span>
-                            </label>
-                        ))}
-                    </div>
-                </>
-            )}
-
-            {includeNone && (
-                <label className="flex items-center gap-3 py-2.5 mt-1 cursor-pointer">
-                    <input
-                        type="radio"
-                        name={radioName}
-                        checked={selectedId === null}
-                        onChange={() => onSelect(null)}
-                        className="accent-primary w-4 h-4 flex-shrink-0"
-                    />
-                    <span className="body-regular text-gray-400">None</span>
-                </label>
-            )}
-        </>
-    );
+                </div>
+            </div>
+        );
+    };
 
     return (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
@@ -245,28 +241,33 @@ const FishSoupConfigModal = ({
                         </div>
                     )}
 
-                    {/* Base 1 (required) */}
+                    {/* Base — optional, pick up to MAX_BASE (same base twice = double portion) */}
                     {baseGroup && (
                         <div>
                             <div className="flex items-center justify-between mb-3">
-                                <p className="paragraph-bold text-dark-100">
-                                    Choose Base 1
-                                    <span className="text-red-500 ml-1">*</span>
-                                </p>
-                                <p className="text-xs text-gray-400">Required</p>
+                                <p className="paragraph-bold text-dark-100">Choose your base</p>
+                                <p className="text-xs text-gray-400">Optional · up to {MAX_BASE}</p>
                             </div>
-                            {renderBaseChoices(`base1-${item.id}`, selectedBase1Id, setSelectedBase1Id, false)}
-                        </div>
-                    )}
 
-                    {/* Base 2 (optional — same option allowed for a double portion) */}
-                    {baseGroup && (
-                        <div>
-                            <div className="flex items-center justify-between mb-3">
-                                <p className="paragraph-bold text-dark-100">Add a 2nd Base</p>
-                                <p className="text-xs text-gray-400">Optional</p>
-                            </div>
-                            {renderBaseChoices(`base2-${item.id}`, selectedBase2Id, setSelectedBase2Id, true)}
+                            {riceOptions.length > 0 && (
+                                <>
+                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Rice — Free</p>
+                                    <div className="flex flex-col mb-3">{riceOptions.map(renderBaseRow)}</div>
+                                </>
+                            )}
+
+                            {noodleOptions.length > 0 && (
+                                <>
+                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                                        Noodle — +${noodleAdder.toFixed(2)}
+                                    </p>
+                                    <div className="flex flex-col">{noodleOptions.map(renderBaseRow)}</div>
+                                </>
+                            )}
+
+                            {baseTotal >= MAX_BASE && (
+                                <p className="text-xs text-gray-400 mt-2">Max {MAX_BASE} portions selected — tap − to change.</p>
+                            )}
                         </div>
                     )}
 

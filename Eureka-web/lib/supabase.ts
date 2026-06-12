@@ -145,10 +145,9 @@ export const calculateCartTotals = async ({
 };
 
 const buildFishSoupSummary = (cfg: FishSoupConfig, userRequest?: string): string => {
-    const lines = [
-        `Soup: ${cfg.soupOption.optionName}`,
-        `Base: ${baseSummary(cfg)}`,
-    ];
+    const lines = [`Soup: ${cfg.soupOption.optionName}`];
+    const base = baseSummary(cfg);
+    if (base) lines.push(`Base: ${base}`);
     if (cfg.addOns.length > 0) {
         lines.push(`Add-ons: ${cfg.addOns.map(a => a.optionName).join(", ")}`);
     }

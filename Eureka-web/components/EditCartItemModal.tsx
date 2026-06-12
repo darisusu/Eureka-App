@@ -85,10 +85,11 @@ const EditCartItemModal = ({
     onClose();
   };
 
+  const fishSoupBase = item.fishSoupConfig ? baseSummary(item.fishSoupConfig) : "";
   const fishSoupLines = item.fishSoupConfig
     ? [
         `Soup: ${item.fishSoupConfig.soupOption.optionName}`,
-        `Base: ${baseSummary(item.fishSoupConfig)}`,
+        ...(fishSoupBase ? [`Base: ${fishSoupBase}`] : []),
         ...(item.fishSoupConfig.addOns.length > 0
           ? [`Add-ons: ${item.fishSoupConfig.addOns.map((a) => a.optionName).join(", ")}`]
           : []),
