@@ -295,6 +295,6 @@ export interface CreateUserParams {
 }
 
 export interface GetMenuParams {
-    category: string;
-    query: string;
+    category?: string;
+    query?: string;
 }
