@@ -16,11 +16,17 @@ function SearchInner() {
 
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [populatedCategoryIds, setPopulatedCategoryIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     getCategories()
       .then((data) => setCategories(data as Category[]))
+      .catch(() => null);
+    // Fetch the full menu once to know which categories have items, independent
+    // of any active category filter — so the tab bar never collapses.
+    getMenu({})
+      .then((data) => setPopulatedCategoryIds(new Set((data as MenuItem[]).map((m) => m.category_id))))
       .catch(() => null);
   }, []);
 
@@ -38,7 +44,7 @@ function SearchInner() {
         <div className="max-w-5xl mx-auto pt-2.5 pb-2 px-5">
           <SearchBar />
         </div>
-        <Filter categories={categories.filter((c) => menu.some((m) => m.category_id === c.id))} />
+        <Filter categories={categories.filter((c) => populatedCategoryIds.has(c.id))} />
       </div>
 
       <div className="min-h-screen">
