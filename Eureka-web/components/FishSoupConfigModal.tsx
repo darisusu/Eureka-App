@@ -141,9 +141,9 @@ const FishSoupConfigModal = ({
         onAdd(config, specialRequest.trim() || undefined, upgrade);
     };
 
-    // Split base options into rice (free) and noodle (paid)
-    const riceOptions = baseGroup?.options.filter((o) => o.price_adder === 0) ?? [];
-    const noodleOptions = baseGroup?.options.filter((o) => o.price_adder > 0) ?? [];
+    // Split base options into rice and noodle by name
+    const riceOptions = baseGroup?.options.filter((o) => o.name.toLowerCase().includes("rice")) ?? [];
+    const noodleOptions = baseGroup?.options.filter((o) => !o.name.toLowerCase().includes("rice")) ?? [];
     const noodleAdder = noodleOptions[0]?.price_adder ?? 0.8;
 
     const renderBaseRow = (opt: MenuOption) => {
@@ -155,7 +155,7 @@ const FishSoupConfigModal = ({
             >
                 <span className="body-regular text-dark-100">{opt.name}</span>
                 <div className="flex items-center gap-4">
-                    <span className={`text-sm font-medium ${opt.price_adder === 0 ? "text-green-600" : "text-dark-100"}`}>
+                    <span className="text-sm font-medium text-dark-100">
                         {priceLabel(opt.price_adder)}
                     </span>
                     <div className="flex items-center gap-2">
@@ -253,7 +253,7 @@ const FishSoupConfigModal = ({
 
                             {riceOptions.length > 0 && (
                                 <>
-                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Rice — Free</p>
+                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Rice — +${(riceOptions[0]?.price_adder ?? 0).toFixed(2)}</p>
                                     <div className="flex flex-col mb-3">{riceOptions.map(renderBaseRow)}</div>
                                 </>
                             )}

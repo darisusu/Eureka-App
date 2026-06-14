@@ -371,16 +371,15 @@ BEGIN
     (v_sg, 'Tom Yum',    1.00, 4),
     (v_sg, 'Sauerkraut', 1.00, 5);
 
-  -- Step 3: Base (rice = free, noodle = +$0.80)
+  -- Step 3: Base (white rice = +$0.80, noodle = +$0.80; brown rice removed)
   INSERT INTO menu_option_groups (category_id, name, selection_type, is_required, sort_order)
   VALUES (v_cat, 'Choose Base', 'single', true, 2) RETURNING id INTO v_bg;
   INSERT INTO menu_options (group_id, name, price_adder, sort_order) VALUES
-    (v_bg, 'White Rice',     0.00, 1),
-    (v_bg, 'Brown Rice',     0.00, 2),
-    (v_bg, 'Thick Bee Hoon', 0.80, 3),
-    (v_bg, 'Thin Bee Hoon',  0.80, 4),
-    (v_bg, 'Maggie Mee',     0.80, 5),
-    (v_bg, 'Mee Sua',        0.80, 6);
+    (v_bg, 'White Rice',     0.80, 1),
+    (v_bg, 'Thick Bee Hoon', 0.80, 2),
+    (v_bg, 'Thin Bee Hoon',  0.80, 3),
+    (v_bg, 'Maggie Mee',     0.80, 4),
+    (v_bg, 'Mee Sua',        0.80, 5);
 
   -- Add-ons
   INSERT INTO menu_option_groups (category_id, name, selection_type, is_required, sort_order)
@@ -473,13 +472,13 @@ SELECT
   1;
 
 -- 6. Set Fish Soup item sort order
-UPDATE menu SET sort_order = 1 WHERE name ILIKE '%mixed fish%';
-UPDATE menu SET sort_order = 2 WHERE name ILIKE '%white fish%';
-UPDATE menu SET sort_order = 3 WHERE name ILIKE '%fried fish%';
-UPDATE menu SET sort_order = 4 WHERE name ILIKE '%fuzhou fishball%';
-UPDATE menu SET sort_order = 5 WHERE name ILIKE '%prawn ball%';
-UPDATE menu SET sort_order = 6 WHERE name ILIKE '%all in%';
-UPDATE menu SET sort_order = 7 WHERE name ILIKE '%beef shabu%';
+UPDATE menu SET sort_order = 1 WHERE name = 'Mixed Fish' AND category_id = (SELECT id FROM categories WHERE name = 'Fish Soup');
+UPDATE menu SET sort_order = 2 WHERE name = 'White Fish' AND category_id = (SELECT id FROM categories WHERE name = 'Fish Soup');
+UPDATE menu SET sort_order = 3 WHERE name = 'Fried Fish' AND category_id = (SELECT id FROM categories WHERE name = 'Fish Soup');
+UPDATE menu SET sort_order = 4 WHERE name = 'FooChow Fishball' AND category_id = (SELECT id FROM categories WHERE name = 'Fish Soup');
+UPDATE menu SET sort_order = 5 WHERE name = 'Prawn Ball' AND category_id = (SELECT id FROM categories WHERE name = 'Fish Soup');
+UPDATE menu SET sort_order = 6 WHERE name = 'All In' AND category_id = (SELECT id FROM categories WHERE name = 'Fish Soup');
+UPDATE menu SET sort_order = 7 WHERE name = 'Beef Shabu Shabu' AND category_id = (SELECT id FROM categories WHERE name = 'Fish Soup');
 
 -- 7. Hide fish head
 UPDATE menu SET is_available = false WHERE name ILIKE '%fish head%';

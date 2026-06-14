@@ -119,7 +119,7 @@ Schema source: `Eureka-web/supabase-schema.sql`
 
 **`orders.updated_at`** is present in the schema with an auto-update trigger (`trg_orders_updated_at`). If the column is missing from an existing DB, run: `ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();`
 
-**`menu.sort_order`** controls display order within a category. `getMenu` orders by this column ascending (NULLs last). If the column is missing from an existing DB, run: `ALTER TABLE menu ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;` then set values per item. Fish Soup display order: 1 Mixed Fish, 2 White Fish, 3 Fried Fish, 4 Fuzhou Fishball, 5 Prawn Ball, 6 All In, 7 Beef Shabu Shabu. Fish Head is marked `is_available = false`.
+**`menu.sort_order`** controls display order within a category. `getMenu` orders by this column ascending (NULLs last). If the column is missing from an existing DB, run: `ALTER TABLE menu ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;` then set values per item. Fish Soup display order: 1 Mixed Fish, 2 White Fish, 3 Fried Fish, 4 FooChow Fishball, 5 Prawn Ball, 6 All In, 7 Beef Shabu Shabu. Fish Head is marked `is_available = false`.
 
 **Menu items can never be hard-deleted** if they are referenced by `order_items.menu_id`. Always soft-delete via `is_available = false` to preserve order history. The FK constraint `order_items_menu_id_fkey` will block any `DELETE` on a referenced row.
 
