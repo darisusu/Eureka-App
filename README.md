@@ -20,10 +20,10 @@
 ```
 Eureka-App/
 ├── Eureka-web/      Next.js web app — Supabase backend   ← active development
-└── Eureka-mobile/   Expo + React Native (iOS & Android) — Appwrite backend
+└── Eureka-mobile/   Expo + React Native — Appwrite backend (legacy, not in use)
 ```
 
-> The two apps do not share a backend. All active development is in `Eureka-web`.
+> All active development is in `Eureka-web`. `Eureka-mobile` is legacy and no longer maintained.
 
 ---
 
@@ -62,19 +62,13 @@ See [`Eureka-web/README.md`](Eureka-web/README.md) for full environment variable
 
 ---
 
-## Eureka-mobile
+## Eureka-mobile (legacy — not in use)
 
-Legacy React Native app; the original version of the product. Uses Appwrite for auth and database.
+The original React Native version of the product. Replaced by `Eureka-web`. Kept in the repo for reference only.
 
 **Stack:** Expo · React Native · Expo Router · NativeWind · Zustand · Appwrite · Stripe
 
-```bash
-cd Eureka-mobile
-npm install
-npx expo start
-```
-
-See [`Eureka-mobile/README.md`](Eureka-mobile/README.md) for setup details.
+See [`Eureka-mobile/README.md`](Eureka-mobile/README.md) for historical details.
 
 ---
 
@@ -83,9 +77,9 @@ See [`Eureka-mobile/README.md`](Eureka-mobile/README.md) for setup details.
 | App | Backend | Auth |
 |---|---|---|
 | `Eureka-web` | [Supabase](https://supabase.com) · schema in `Eureka-web/supabase-schema.sql` | Phone lookup — plain `users` table row, no Supabase Auth |
-| `Eureka-mobile` | [Appwrite](https://appwrite.io) (Singapore) | Email + password via Appwrite Auth |
+| `Eureka-mobile` | [Appwrite](https://appwrite.io) (Singapore) | Email + password via Appwrite Auth *(legacy)* |
 
-Both apps use [Stripe](https://stripe.com) for payments (SGD, PaymentIntent flow).
+`Eureka-web` uses [Stripe](https://stripe.com) for payments (SGD, PaymentIntent flow).
 
 ---
 
