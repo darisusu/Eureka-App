@@ -38,7 +38,7 @@ Prefix changed from `EXPO_PUBLIC_` to `NEXT_PUBLIC_`. All variable names are oth
 
 ### Navigation / Layout
 - Mobile: bottom tab bar (floating pill, always visible)
-- Web: floating bottom tab bar only — no desktop nav, no Home tab (tabs: Menu / Cart / Profile); `/` redirects to `/search` via middleware
+- Web (initial port): floating bottom tab bar — later replaced with fixed top nav bar (see Post-Migration Changes below)
 
 ---
 
@@ -83,7 +83,7 @@ Changes made to `Eureka-web` after the migration and the Appwrite → Supabase s
 | Backend | Appwrite → Supabase; cloud functions → Next.js API routes |
 | Auth | Email + password → phone-number lookup (no session); staff require PIN |
 | Phone normalisation | SG numbers normalised to `+65XXXXXXXX` on sign-in and sign-up |
-| Navigation | Removed bottom tab bar; fixed top nav bar with EurekaGO branding (fish logo), dynamic cart pill, and Profile link; `/` redirects to `/search` |
+| Navigation | Removed bottom tab bar; fixed top nav bar with EurekaGO branding (fish logo), dynamic cart pill, and Profile link; `/cart` redirects to `/search` |
 | Branding | App renamed **EurekaGO**; fish mascot logo (`/public/fish.png`) in top nav |
 | Cart UX | Cart is now a slide-in drawer (`CartDrawer`); no separate `/cart` page (redirects to `/search`) |
 | Menu layout | Menu grouped by category with section headers; responsive `grid-cols-1 sm:grid-cols-3` layout |
