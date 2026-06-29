@@ -159,12 +159,6 @@ STRIPE_CURRENCY
   ```
   The promo code should be generated and assigned per user at registration time. Implementation will use a WhatsApp Business API provider (e.g. Twilio or Meta Cloud API) called from the `POST /api/register` route (or equivalent sign-up handler).
 
-## Vestigial / Unused Files (web)
-
-- `constants/index.ts` — carried over from the mobile port; exports hardcoded `CATEGORIES` (Burger, Pizza, Wrap, Burrito), `offers`, `sides`, `toppings`, and PNG asset references. None of these are imported anywhere in the web app. The web loads categories dynamically from Supabase via `getCategories()`.
-
----
-
 ## Key Decisions
 
 **Web uses Supabase; mobile uses Appwrite.** The two apps no longer share a backend. The Supabase schema (`supabase-schema.sql`) is the authoritative data model for the web app.
@@ -175,7 +169,7 @@ STRIPE_CURRENCY
 
 **Monetary unit boundary.** API routes and promo logic use cents (integers). `orders.total` and `menu.price` are stored as dollars (`NUMERIC(10,2)`). Convert at the boundary: `cents = Math.round(dollars * 100)`.
 
-**Promo validation is server-side authoritative.** `validatePromoCode()` in `lib/supabase.ts` is a client-side preview only. The actual enforcement is in `/api/calculate-cart` and `/api/create-checkout`. A `UNIQUE(promo_id, user_id)` constraint on `promo_redemptions` prevents double-redemption under concurrent requests; the API routes catch Postgres error `23505` and return a friendly error.
+**Promo validation is server-side authoritative.** All promo enforcement lives in `/api/calculate-cart` and `/api/create-checkout`; there is no client-side validation. A `UNIQUE(promo_id, user_id)` constraint on `promo_redemptions` prevents double-redemption under concurrent requests; the API routes catch Postgres error `23505` and return a friendly error.
 
 **Customer order UX is intentionally minimal.** Customers see estimated wait time and a "ready for collection" banner — no intermediate status steps. No cancel button is exposed to customers; orders can only be cancelled by editing the DB directly.
 
