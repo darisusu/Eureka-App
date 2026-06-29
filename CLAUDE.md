@@ -4,6 +4,53 @@ Eureka is a grab-and-go pre-order and prepay platform for high-volume food stall
 
 ---
 
+## Quick Start
+
+```bash
+cd Eureka-web
+npm install        # install dependencies
+npm run dev        # start dev server (localhost:3000)
+npm run build      # production build
+```
+
+Requires `.env.local` with Supabase + Stripe keys (see "Web Environment Variables" below).
+
+---
+
+## Key File Map (`Eureka-web/`)
+
+```
+app/
+├── (auth)/sign-in|sign-up/         Auth pages (phone-only)
+├── (tabs)/search/                  Menu browsing — main customer page
+├── (tabs)/profile/                 Customer profile + recent orders
+├── (tabs)/cart/                    Redirects to /search (cart is a drawer, not a page)
+├── order/[id]/                     Order detail page
+├── staff/                          Staff kanban dashboard (role-gated)
+├── stripe-redirect/                Post-payment redirect handler
+├── api/calculate-cart/             Validate cart + apply promo codes
+├── api/create-checkout/            Create order + Stripe PaymentIntent / confirm payment
+├── api/estimate-eta/               Pre-checkout ETA calculation
+├── api/update-order-status/        Staff status transitions
+├── api/verify-pin/                 Staff PIN auth
+└── api/webhooks/stripe/            Stripe webhook handler
+components/                         Shared UI (CartDrawer, MenuCard, FishSoupConfigModal, etc.)
+store/
+├── auth.store.ts                   Auth state (localStorage)
+├── cart.store.ts                   Cart state (sessionStorage)
+└── orders.store.ts                 Recent orders (localStorage)
+lib/
+├── config.ts                       All tuneable constants — single source of truth
+├── supabase.ts                     Supabase client + all DB query functions
+├── time.ts                         Availability / timezone helpers
+├── fishSoup.ts                     Fish soup config logic
+└── seed.ts                         Dev seed script (never run against prod)
+```
+
+> **Do not explore or modify:** `Eureka-mobile/` (legacy, not in use) and `node_modules/`.
+
+---
+
 ## Monorepo Structure
 
 ```
