@@ -7,6 +7,7 @@ import { useCartStore } from "@/store/cart.store";
 import type { CartItemType } from "@/type";
 import { Minus, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 const CartItem = ({ item, isLocked }: { item: CartItemType; isLocked?: boolean }) => {
   const { increaseQty, decreaseQty, removeItem } = useCartStore();
@@ -17,7 +18,15 @@ const CartItem = ({ item, isLocked }: { item: CartItemType; isLocked?: boolean }
       .reduce((sum, i) => sum + i.quantity, 0)
   );
   const isRestricted = !!item.categoryName && CATEGORY_ITEM_LIMIT_NAMES.includes(item.categoryName);
-  const isIncreaseDisabled = isLocked || (isRestricted && restrictedQty >= CATEGORY_ITEM_LIMIT);
+  const isAtLimit = isRestricted && restrictedQty >= CATEGORY_ITEM_LIMIT;
+
+  const handleIncrease = () => {
+    if (isAtLimit) {
+      toast(`Fish Soup & Zichar limit reached (${CATEGORY_ITEM_LIMIT}/${CATEGORY_ITEM_LIMIT}).`);
+      return;
+    }
+    increaseQty(item.id, item.specialRequest, upgradeDrinkName, item.fishSoupConfig);
+  };
 
   const unitPrice = item.price + (item.upgrade?.upgradePrice ?? 0) + fishSoupPriceAdder(item.fishSoupConfig);
   const upgradeDrinkName = item.upgrade?.drinkName;
@@ -68,9 +77,9 @@ const CartItem = ({ item, isLocked }: { item: CartItemType; isLocked?: boolean }
             <span className="base-bold text-dark-100">{item.quantity}</span>
 
             <button
-              onClick={() => increaseQty(item.id, item.specialRequest, upgradeDrinkName, item.fishSoupConfig)}
-              disabled={isIncreaseDisabled}
-              className="cart-item__actions disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={handleIncrease}
+              disabled={isLocked}
+              className={`cart-item__actions disabled:opacity-40 disabled:cursor-not-allowed${isAtLimit && !isLocked ? " opacity-40" : ""}`}
             >
               <Plus size={10} color="#FF9C01" />
             </button>
