@@ -64,10 +64,10 @@ No Supabase Auth session. Users are plain rows in the `users` table:
 
 - All monetary values in API routes use **cents** (integers). DB stores dollars (`NUMERIC(10,2)`). Convert at the boundary: `cents = Math.round(dollars * 100)`.
 - Server-side API routes (`/api/*`) use `SUPABASE_SECRET_KEY` to bypass RLS. Never use this key client-side.
-- Cart is **not** persisted (lost on refresh). Orders store IS persisted (last 5 orders kept in localStorage).
+- Cart is persisted to **sessionStorage** — survives page refresh but clears when the tab is closed. Orders store IS persisted to localStorage (last 5 orders).
 - Cart is a slide-in **drawer** (`CartDrawer`), not a separate page. The `/cart` route redirects to `/search`.
 - Staff dashboard polls every 10 s (active orders) and 15 s (history). No Supabase Realtime.
-- `/` redirects to `/search` (middleware). Navigation is a fixed top bar; no bottom tab bar.
+- Home page (`/`) renders empty; `/cart` redirects to `/search` (server-side redirect). Navigation is a fixed top bar; no bottom tab bar.
 - Order numbers reset daily at 4am SGT. The `daily_order_counter` table tracks the per-day counter.
 
 ## Configuration
@@ -78,11 +78,17 @@ All tuneable constants are in **`lib/config.ts`** — the single source of truth
 |---|---|---|
 | `RECENT_ORDERS_LIMIT` | `5` | Orders shown on profile page; cap stored in localStorage |
 | `POST_PAYMENT_REDIRECT_DELAY_MS` | `1500` | Delay on /stripe-redirect before navigating to order detail |
-| `ORDER_NUMBER_PAD_LENGTH` | `5` | Zero-pad width for displayed order numbers (e.g. "00042") |
+| `ORDER_NUMBER_PAD_LENGTH` | `3` | Zero-pad width for displayed order numbers (e.g. "042") |
 | `STAFF_ACTIVE_ORDERS_POLL_MS` | `10000` | Staff dashboard poll interval for active orders |
 | `STAFF_HISTORY_POLL_MS` | `15000` | Staff dashboard poll interval for collected history |
 | `STAFF_ACTIVE_ORDERS_LIMIT` | `100` | Max active orders fetched per poll |
 | `STAFF_HISTORY_ORDERS_LIMIT` | `200` | Max collected orders fetched for history tab |
 | `DEFAULT_DEPT_MAX_WAIT_MINUTES` | `45` | Fallback when dept_config.max_wait_minutes is NULL |
+| `SHOW_PROMO_CODE` | `true` | Toggle promo code input visibility in cart drawer |
+| `SET_MEAL_UPGRADE_ITEM_NAME` | `"Set Meal Upgrade"` | Hidden menu item name used to bill the drink upgrade |
+| `SET_MEAL_UPGRADE_EXCLUDED_CATEGORIES` | `["Drinks", "Zichar Add-ons"]` | Categories that skip the set meal upgrade prompt |
+| `SPECIAL_REQUEST_EXCLUDED_CATEGORIES` | `["Drinks"]` | Categories that skip the special request input |
+| `CATEGORY_ITEM_LIMIT` | `4` | Max total items from restricted categories per cart |
+| `CATEGORY_ITEM_LIMIT_NAMES` | `["Fish Soup", "Zichar"]` | Categories subject to the per-order item limit |
 
-Supabase table names (`TABLE_ORDERS`, `TABLE_MENU`, etc.) and the RPC name (`RPC_CALCULATE_DEPT_READY_AT`) are also exported from `lib/config.ts`. DB-only settings — `dept_config` prep/gap times, the 4am SGT daily reset, and RLS policies — are documented with comments in that file.
+Supabase table names (`TABLE_ORDERS`, `TABLE_MENU`, etc.), the RPC name (`RPC_CALCULATE_DEPT_READY_AT`), order status config (`VALID_ORDER_STATUSES`, `ACTIVE_ORDER_STATUSES`, `STATUS_CONFIG`), and all table name constants are also exported from `lib/config.ts`. DB-only settings — `dept_config` prep/gap times, the 4am SGT daily reset, and RLS policies — are documented with comments in that file.
