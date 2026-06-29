@@ -8,25 +8,15 @@ Eureka is a grab-and-go pre-order and prepay platform for high-volume food stall
 
 ```
 Eureka-App/
-├── Eureka-mobile/   Expo + React Native (iOS & Android) — uses Appwrite backend
-└── Eureka-web/      Next.js web app — uses Supabase backend
+├── Eureka-web/      Next.js web app — Supabase backend   ← active development
+└── Eureka-mobile/   Expo + React Native — Appwrite backend (LEGACY, not in use)
 ```
 
-> **Active development focus: `Eureka-web` only.** Do not modify files in `Eureka-mobile/` unless explicitly asked.
+> **Active development: `Eureka-web` only.** `Eureka-mobile` is legacy and no longer maintained. Do not modify files in `Eureka-mobile/` unless explicitly asked.
 
 ---
 
 ## Tech Stack
-
-### Eureka-mobile
-- **Expo** ~54 · **React Native** 0.81.5
-- **Expo Router** ~6 (file-based navigation)
-- **NativeWind** v4 — Tailwind classes via `className` prop on RN primitives; do not use `StyleSheet.create` unless NativeWind can't achieve the style
-- **Zustand** v5 — auth, cart, orders stores
-- **react-native-appwrite** ^0.19 — Appwrite SDK for React Native
-- **@stripe/stripe-react-native** 0.50.3 — native payment sheet
-- **@sentry/react-native** ^7 — error tracking
-- **expo-screen-orientation** — staff screen locks to landscape on mount
 
 ### Eureka-web
 - **Next.js** 16.2.6 (App Router) · **React** 19
@@ -39,9 +29,14 @@ Eureka-App/
 - **lucide-react** — SVG icons
 - **clsx** — conditional class names
 
+### Eureka-mobile (legacy — not in use)
+- **Expo** ~54 · **React Native** 0.81.5 · **Expo Router** ~6
+- **NativeWind** v4 · **Zustand** v5 · **react-native-appwrite** ^0.19
+- **@stripe/stripe-react-native** 0.50.3 · **@sentry/react-native** ^7
+
 ### Backends
-- **Appwrite** (Singapore — `https://sgp.cloud.appwrite.io/v1`) — used by **mobile only**
-- **Supabase** (`https://bcmekxmrckavxospltuh.supabase.co`) — used by **web only**; schema in `Eureka-web/supabase-schema.sql`
+- **Supabase** (`https://bcmekxmrckavxospltuh.supabase.co`) — used by **web**; schema in `Eureka-web/supabase-schema.sql`
+- **Appwrite** (Singapore — `https://sgp.cloud.appwrite.io/v1`) — legacy mobile only, not in use
 - **Stripe** — PaymentIntent flow, currency SGD; secret key server-side only in Next.js API routes
 
 ### Web API Routes (Next.js, replaces Appwrite Cloud Functions)
@@ -52,13 +47,14 @@ Eureka-App/
 | `POST /api/webhooks/stripe` | Stripe webhook — handles `payment_intent.succeeded` / `payment_intent.payment_failed` as fallback for out-of-band confirmations |
 | `POST /api/verify-pin` | Validates staff PIN against `pin_hash` during sign-in |
 | `POST /api/estimate-eta` | Accepts `categoryIds[]`, calls `calculate_dept_ready_at` for each, returns `minutesFromNow` for pre-checkout display |
+| `POST /api/update-order-status` | Staff dashboard status transition — validates `orderId` + `status` against `VALID_ORDER_STATUSES`, updates `orders` row via service role key |
 
 ---
 
 ## Auth Approach
 
-### Mobile (`Eureka-mobile`)
-Standard Appwrite Auth: `account.create()` registers an account, `account.createEmailPasswordSession()` creates a session. `getCurrentUser()` calls `account.get()` to resolve the session, then fetches the matching document from the `user` collection. The user object carries `{ id, accountId, name, email, avatar, role }`. Auth state is held in Zustand but not persisted — `fetchAuthenticatedUser()` re-checks on every app launch.
+### Mobile (`Eureka-mobile`) — legacy, not in use
+Standard Appwrite Auth (`account.create()` / `account.createEmailPasswordSession()`). User object: `{ id, accountId, name, email, avatar, role }`. Auth state in Zustand, not persisted.
 
 ### Web (`Eureka-web`)
 **No session, no password.** Identity is phone-number only:
@@ -88,8 +84,8 @@ Standard Appwrite Auth: `account.create()` registers an account, `account.create
 - Stripe payment: `<PaymentElement>` rendered inside the `CartDrawer`; uses `redirect: "if_required"` so card payments confirm inline without a page redirect; non-card methods (bank redirect, etc.) open `/stripe-redirect` on completion
 - Stripe webhook: `/api/webhooks/stripe` handles `payment_intent.succeeded` as fallback if the customer closes the browser before redirect
 - Post-payment confirmation: `/api/create-checkout` with `action: "confirm"` verifies PaymentIntent, sets order to `"received"`, returns `readyAt` from `order_dept_slots`; `/stripe-redirect` handles three states: **success** (navigates to order detail after `POST_PAYMENT_REDIRECT_DELAY_MS`), **failure** (shows error UI and reopens cart after the same delay), and **3D Secure popup** (detects `window.opener` — the issuer auth tab opened by Stripe — closes itself with a friendly message so the original tab handles confirmation)
-- Navigation: middleware redirects `/` → `/search`; fixed top nav bar with EurekaGO branding (fish logo), dynamic cart pill, and Profile link — no bottom tab bar, no desktop sidebar
-- Customer order tracking: **removed from the customer UI**; the home screen (`/`) is no longer customer-facing (redirects to `/search`)
+- Navigation: `/cart` redirects to `/search` (server-side redirect); home page (`/`) renders empty (no middleware); fixed top nav bar with EurekaGO branding (fish logo), dynamic cart pill, and Profile link — no bottom tab bar, no desktop sidebar
+- Customer order tracking: **removed from the customer UI**; the home screen (`/`) is not customer-facing
 - Profile screen: displays name and phone; "Back to Menu" link to `/search`; shows up to `RECENT_ORDERS_LIMIT` recent paid orders fetched from Supabase on load (stored in orders store, trimmed to that limit); each order is a clickable card linking to `/order/[id]`
 - Order detail page (`/order/[id]`): shows order number, colour-coded status badge, ready-by banner (visible when status is `received` or `ready`), itemised line items with qty and special requests, price breakdown (subtotal + promo discount + total paid); accessible from the profile page
 - Staff dashboard: two-column kanban (Received / Ready); role-gated (redirects non-staff); optimistic status updates with error rollback; polls every 10 s for active orders and every 15 s for history; "Waiting X min" timer in Received column uses `created_at`; History tab (collected orders); Settings tab with sign-out
@@ -195,4 +191,4 @@ STRIPE_CURRENCY
 
 **Set meal upgrade price is DB-authoritative.** There is no hardcoded price constant for the drink upgrade. `getSetMealUpgradeItem()` fetches both the `id` and `price` of the hidden "Set Meal Upgrade" menu item from Supabase, and the price is stored on `CartItemUpgrade.upgradePrice` at the moment the customer picks a drink. All client-side display (modal labels, cart totals) reads from `item.upgrade.upgradePrice`; the server charges whatever price the DB row has. To change the upgrade price, update the menu row in Supabase only.
 
-**Each app has its own seed script.** `Eureka-web/lib/seed.ts` targets Supabase (seeds Drinks / Porridge / Fish Soup categories with matching menu items — note: Zichar and Zichar Add-ons are managed directly via Supabase SQL, not this seed script); run with `npx tsx --env-file=.env.local lib/seed.ts`. `Eureka-mobile/lib/seed.ts` + `lib/data.ts` target Appwrite; run with `npx tsx lib/seed.ts`. Never run either against production.
+**Seed script.** `Eureka-web/lib/seed.ts` targets Supabase (seeds Drinks / Porridge / Fish Soup categories with matching menu items — note: Zichar and Zichar Add-ons are managed directly via Supabase SQL, not this seed script); run with `npx tsx --env-file=.env.local lib/seed.ts`. Never run against production. (`Eureka-mobile/lib/seed.ts` + `lib/data.ts` targeted Appwrite — legacy, not in use.)
