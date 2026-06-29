@@ -208,19 +208,6 @@ export interface CartStore {
     ) => void;
 }
 
-export type PromoType = "PERCENT" | "FIXED";
-
-export interface PromoCode {
-    id: string;
-    codeUpper: string;
-    isActive: boolean;
-    type: PromoType;
-    value: number;
-    maxDiscountCents?: number;
-    minSubtotalCents?: number;
-    usageLimitPerUser: number;
-}
-
 export type CartTotalsResponse = {
     subtotalCents: number;
     discountCents: number;

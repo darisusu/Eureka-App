@@ -10,7 +10,6 @@ import type {
     MenuOptionGroup,
     OrderDetail,
     OrderHistoryEntry,
-    PromoCode,
     StaffOrder,
     OrderStatus,
     User,
@@ -18,24 +17,18 @@ import type {
 import { baseSummary, fishSoupOptionIds } from "@/lib/fishSoup";
 import { resolveParentTiming } from "@/lib/time";
 import {
-    DEFAULT_DEPT_MAX_WAIT_MINUTES,
     ORDER_NUMBER_PAD_LENGTH,
     RECENT_ORDERS_LIMIT,
-    RPC_CALCULATE_DEPT_READY_AT,
     SET_MEAL_UPGRADE_DRINKS_CATEGORY_NAME,
     SET_MEAL_UPGRADE_ITEM_NAME,
     STAFF_ACTIVE_ORDERS_LIMIT,
     STAFF_HISTORY_ORDERS_LIMIT,
     TABLE_CATEGORIES,
-    TABLE_DEPT_CONFIG,
     TABLE_MENU,
     TABLE_MENU_OPTION_GROUPS,
     TABLE_MENU_OPTIONS,
-    TABLE_ORDER_DEPT_SLOTS,
     TABLE_ORDER_ITEMS,
     TABLE_ORDERS,
-    TABLE_PROMO_CODES,
-    TABLE_PROMO_REDEMPTIONS,
     TABLE_USERS,
 } from "@/lib/config";
 
@@ -266,16 +259,6 @@ export const getRecentOrders = async ({
     });
 };
 
-export const getOrderStatus = async (orderId: string): Promise<OrderStatus | null> => {
-    const { data, error } = await supabase
-        .from(TABLE_ORDERS)
-        .select("status")
-        .eq("id", orderId)
-        .single();
-    if (error || !data) return null;
-    return data.status as OrderStatus;
-};
-
 export const getOrderDetail = async (orderId: string): Promise<OrderDetail | null> => {
     const { data: order, error } = await supabase
         .from(TABLE_ORDERS)
@@ -378,62 +361,6 @@ export const updateOrderStatus = async ({ orderId, status }: { orderId: string; 
     if (!json.ok) throw new Error(json.message ?? "Failed to update order status.");
 };
 
-const getPromoCodeByCodeUpper = async (codeUpper: string): Promise<PromoCode> => {
-    const { data, error } = await supabase
-        .from(TABLE_PROMO_CODES)
-        .select("*")
-        .eq("code_upper", codeUpper)
-        .maybeSingle();
-    if (error || !data) throw new Error("Promo code not found.");
-    return {
-        id: data.id,
-        codeUpper: data.code_upper,
-        isActive: data.is_active,
-        type: data.type as "PERCENT" | "FIXED",
-        value: Number(data.value),
-        maxDiscountCents: data.max_discount_cents ?? undefined,
-        minSubtotalCents: data.min_subtotal_cents ?? undefined,
-        usageLimitPerUser: data.usage_limit_per_user ?? 0,
-    };
-};
-
-const hasUserRedeemedPromo = async (promoId: string, userId: string): Promise<boolean> => {
-    const { count } = await supabase
-        .from(TABLE_PROMO_REDEMPTIONS)
-        .select("id", { count: "exact", head: true })
-        .eq("promo_id", promoId)
-        .eq("user_id", userId);
-    return (count ?? 0) > 0;
-};
-
-const calculatePromoDiscount = (promo: PromoCode, subtotalCents: number) => {
-    let discountCents = promo.type === "PERCENT"
-        ? Math.round((subtotalCents * promo.value) / 100)
-        : promo.value;
-    if (promo.maxDiscountCents != null) discountCents = Math.min(discountCents, promo.maxDiscountCents);
-    return Math.min(discountCents, subtotalCents);
-};
-
-export const getOrderEta = async (orderId: string): Promise<string | null> => {
-    const { data, error } = await supabase
-        .from(TABLE_ORDER_DEPT_SLOTS)
-        .select("dept_ready_at")
-        .eq("order_id", orderId);
-    if (error || !data?.length) return null;
-    const max = data.reduce((m, r) => (r.dept_ready_at > m ? r.dept_ready_at : m), data[0].dept_ready_at);
-    return max;
-};
-
-export const getDeptConfig = async (categoryIds: string[]): Promise<{ categoryId: string; maxWaitMinutes: number }[]> => {
-    if (!categoryIds.length) return [];
-    const { data, error } = await supabase
-        .from(TABLE_DEPT_CONFIG)
-        .select("category_id, max_wait_minutes")
-        .in("category_id", categoryIds);
-    if (error || !data) return [];
-    return data.map(r => ({ categoryId: r.category_id, maxWaitMinutes: r.max_wait_minutes ?? DEFAULT_DEPT_MAX_WAIT_MINUTES }));
-};
-
 export const getMenuOptionGroups = async (categoryId: string): Promise<MenuOptionGroup[]> => {
     const { data: groups, error } = await supabase
         .from(TABLE_MENU_OPTION_GROUPS)
@@ -477,30 +404,4 @@ export const getSetMealUpgradeItem = async (): Promise<{ id: string; price: numb
         .maybeSingle();
     if (error || !data) return null;
     return { id: data.id, price: Number(data.price) };
-};
-
-export const validatePromoCode = async ({
-    code,
-    userId,
-    subtotalCents,
-}: {
-    code: string;
-    userId: string;
-    subtotalCents: number;
-}) => {
-    const codeUpper = code.trim().toUpperCase();
-    if (!codeUpper) throw new Error("Promo code is required.");
-    if (subtotalCents <= 0) throw new Error("Subtotal must be greater than zero.");
-
-    const promo = await getPromoCodeByCodeUpper(codeUpper);
-    if (!promo.isActive) throw new Error("Promo code is inactive.");
-    if (promo.minSubtotalCents != null && subtotalCents < promo.minSubtotalCents) {
-        throw new Error(`Minimum subtotal is $${(promo.minSubtotalCents / 100).toFixed(2)}.`);
-    }
-    if ((promo.usageLimitPerUser ?? 0) > 0 && await hasUserRedeemedPromo(promo.id, userId)) {
-        throw new Error("Promo code already used.");
-    }
-    const discountCents = calculatePromoDiscount(promo, subtotalCents);
-    if (discountCents <= 0) throw new Error("Promo code does not apply.");
-    return { promoId: promo.id, codeUpper, discountCents };
 };
