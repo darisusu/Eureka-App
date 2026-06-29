@@ -42,6 +42,15 @@ export default function AuthLayout({
         <div className="w-full">
           {children}
         </div>
+        <div className="mt-6 w-full rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-center">
+          <p className="text-sm font-medium text-gray-700">
+            All take-away orders here are for self pick up at:
+          </p>
+          <p className="mt-1 text-sm font-bold text-gray-900">Eureka Taste Cafe</p>
+          <p className="text-sm text-gray-600">
+            14 Medical Drive, MD6, #01-03. Singapore 117599
+          </p>
+        </div>
       </div>
     </div>
   );
