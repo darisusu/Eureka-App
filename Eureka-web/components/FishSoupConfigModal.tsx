@@ -141,11 +141,6 @@ const FishSoupConfigModal = ({
         onAdd(config, specialRequest.trim() || undefined, upgrade);
     };
 
-    // Split base options into rice and noodle by name
-    const riceOptions = baseGroup?.options.filter((o) => o.name.toLowerCase().includes("rice")) ?? [];
-    const noodleOptions = baseGroup?.options.filter((o) => !o.name.toLowerCase().includes("rice")) ?? [];
-    const noodleAdder = noodleOptions[0]?.price_adder ?? 0.8;
-
     const renderBaseRow = (opt: MenuOption) => {
         const qty = baseQty[opt.id] ?? 0;
         return (
@@ -251,21 +246,9 @@ const FishSoupConfigModal = ({
                                 <p className="text-xs text-gray-400">Optional · up to {MAX_BASE}</p>
                             </div>
 
-                            {riceOptions.length > 0 && (
-                                <>
-                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Rice — +${(riceOptions[0]?.price_adder ?? 0).toFixed(2)}</p>
-                                    <div className="flex flex-col mb-3">{riceOptions.map(renderBaseRow)}</div>
-                                </>
-                            )}
-
-                            {noodleOptions.length > 0 && (
-                                <>
-                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                                        Noodle — +${noodleAdder.toFixed(2)}
-                                    </p>
-                                    <div className="flex flex-col">{noodleOptions.map(renderBaseRow)}</div>
-                                </>
-                            )}
+                            <div className="flex flex-col">
+                                {baseGroup.options.map(renderBaseRow)}
+                            </div>
 
                             {baseTotal >= MAX_BASE && (
                                 <p className="text-xs text-gray-400 mt-2">Max {MAX_BASE} portions selected — tap − to change.</p>
