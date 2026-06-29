@@ -390,7 +390,6 @@ export default function CartDrawer({
     })
       .then((r) => r.json())
       .then((res) => {
-        console.log("[estimate-eta] response:", res);
         if (res.ok && res.data.minutesFromNow != null) {
           setEstimatedTime({ range: `${res.data.minutesFromNow} min`, note: "Based on current kitchen load" });
         }

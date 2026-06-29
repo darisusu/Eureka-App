@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
             .eq("id", orderId);
 
         if (error) {
-            return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+            return NextResponse.json({ ok: false, message: "Failed to update order status." }, { status: 500 });
         }
 
         return NextResponse.json({ ok: true });
